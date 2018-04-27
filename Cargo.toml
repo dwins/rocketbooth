@@ -1,0 +1,16 @@
+[package]
+name = "rocketbooth"
+version = "0.1.0"
+authors = ["David Winslow <cdwinslow@gmail.com>"]
+license = "MIT"
+readme = "README.md"
+
+[build-dependencies]
+bindgen = "0.33.0"
+
+[dependencies]
+libc = "0.2.0"
+raster = "0.2.0"
+time = "0.1.38"
+config = "0.1.3"
+cups-sys = "0.1.3"

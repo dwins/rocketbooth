@@ -1,0 +1,6 @@
+scratch/
+scripts/
+target/
+**/*.rs.bk
+.vscode/
+photobooth.cfg
