@@ -1,0 +1,13 @@
+# Example systemd service definition.
+# Place in /etc/systemd/system/ to have Rocketbooth start at boot time.
+[Unit]
+Description=Rocketbooth Photo Kiosk
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/rocketbooth
+ExecStart=/home/pi/rocketbooth/target/release/main
+
+[Install]
+WantedBy=multi-user.target
