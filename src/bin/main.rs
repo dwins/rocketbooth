@@ -35,6 +35,7 @@ fn main() {
     let appstate = Arc::new((Mutex::new(AppState::Ready), Condvar::new()));
     let (print_sender, print_receiver) = mpsc::channel::<()>();
     let print_barrier = Arc::new(std::sync::Barrier::new(2));
+    let button_state = Arc::new((Mutex::new(false), Condvar::new()));
 
     spawn_render_thread(
         Arc::clone(&frame_image),
@@ -59,6 +60,12 @@ fn main() {
         Arc::clone(&print_barrier),
     );
 
+    if config.enable_shutdown_on_longpress() {
+        spawn_shutdown_thread(
+            Arc::clone(&button_state),
+        );
+    }
+
     // Loop and notify the appstate condition variable if the screen is touched.
     // TODO: Exit if the touch lasts for 5 seconds
     let mut device = rocketbooth::find_device_with_name(&config.touch_device_name())
@@ -73,11 +80,39 @@ fn main() {
             if pressed != prev {
                 prev = pressed;
                 if prev {
+                    *button_state.0.lock().unwrap() = pressed;
+                    button_state.1.notify_all();
                     appstate.1.notify_all()
                 }
             }
         }
     }
+}
+
+fn spawn_shutdown_thread(
+    button_state: Arc<(Mutex<bool>, Condvar)>,
+) -> JoinHandle<()> {
+    std::thread::Builder::new()
+        .name("Shutdown".to_string())
+        .spawn(move || {
+            let (ref state, ref cvar) = *button_state;
+            let mut pressed = state.lock().unwrap();
+            loop {
+                if *pressed {
+                    let (pressed_, timeout_result) = cvar.wait_timeout(pressed, Duration::from_secs(15)).unwrap();
+                    pressed = pressed_;
+                    if timeout_result.timed_out() {
+                        std::process::Command::new("sudo")
+                            .arg("shutdown")
+                            .arg("now")
+                            .status()
+                            .expect("Failed to launch subprocess");
+                        std::process::exit(0);
+                    }
+                }
+                pressed = cvar.wait(pressed).unwrap();
+            }
+        }).unwrap()
 }
 
 fn spawn_render_thread(

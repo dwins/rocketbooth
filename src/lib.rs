@@ -101,6 +101,14 @@ impl PhotoboothConfig {
     pub fn enable_printing(&self) -> bool {
         self.cfg.lookup_boolean_or("enable_printing", false)
     }
+
+    /// A bool that controls whether we should shut down when the touchscreen
+    /// is pressed for a long time (15 seconds). This allows a keyboard-less
+    /// way to turn off the raspberry pi (since you might not have a keyboard
+    /// connected to the kiosk.)
+    pub fn enable_shutdown_on_longpress(&self) -> bool {
+        self.cfg.lookup_boolean_or("enable_shutdown_on_longpress", false)
+    }
 }
 
 /// Create an Image without zeroing out its buffer.
