@@ -1,0 +1,7 @@
+[package]
+name = "rocketbooth"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+rocketbooth-libav = { version = "0.1.0", path = "../rocketbooth-libav" }

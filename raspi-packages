@@ -1,7 +1,7 @@
-clang
 ffmpeg
 libavformat-dev
 libavcodec-dev
 libavdevice-dev
-libswscale-dev
 libcups2-dev
+libclang-dev
+libswscale-dev
