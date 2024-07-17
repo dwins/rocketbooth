@@ -8,6 +8,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let bindings = bindgen::builder()
         .header("src/bindings.h")
+        .blocklist_var("FP_ZERO")
+        .blocklist_var("FP_INFINITE")
+        .blocklist_var("FP_NAN")
+        .blocklist_var("FP_NORMAL")
+        .blocklist_var("FP_SUBNORMAL")
         .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()))
         .generate()?;
     let out_path = PathBuf::from(env::var("OUT_DIR")?);
