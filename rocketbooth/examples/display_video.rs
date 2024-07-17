@@ -59,6 +59,7 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
         ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
     }
 
+    drop(receiver);
     video_handle.join();
 
     Ok(())
