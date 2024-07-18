@@ -1,7 +1,6 @@
 use rocketbooth::image_to_texture;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
-use sdl2::rect::Rect;
 use std::time::Duration;
 
 pub fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -19,9 +18,8 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
     let texture_creator = canvas.texture_creator();
     let texture = image_to_texture("./prompts/prompts.001.png", &texture_creator)?;
 
-    let (w, h) = canvas.output_size()?;
     canvas.clear();
-    canvas.copy(&texture1, None, None)?;
+    canvas.copy(&texture, None, None)?;
     canvas.present();
     let mut event_pump = sdl_context.event_pump()?;
     'running: loop {
@@ -37,7 +35,6 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         // The rest of the game loop goes here...
 
-        let (w, h) = canvas.output_size()?;
         canvas.clear();
         canvas.copy(&texture, None, None)?;
         canvas.present();

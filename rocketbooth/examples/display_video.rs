@@ -60,7 +60,7 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     drop(receiver);
-    video_handle.join();
+    video_handle.join().ok().ok_or("Failed to join thread")?;
 
     Ok(())
 }
