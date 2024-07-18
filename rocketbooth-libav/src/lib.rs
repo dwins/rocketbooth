@@ -6,7 +6,7 @@ use std::{
 
 use libc::{EAGAIN, EINVAL};
 use sys::{
-    av_dict_free, av_dict_set, av_find_input_format, av_frame_alloc, av_frame_free, av_frame_get_buffer, av_free, av_get_padded_bits_per_pixel, av_malloc, av_packet_alloc, av_packet_free, av_packet_unref, av_pix_fmt_desc_get, av_read_frame, av_register_all, avcodec_alloc_context3, avcodec_copy_context, avcodec_find_decoder, avcodec_free_context, avcodec_open2, avcodec_receive_frame, avcodec_send_packet, avdevice_register_all, avformat_find_stream_info, avformat_open_input, avpicture_fill, avpicture_free, sws_freeContext, sws_getContext, sws_scale, AVCodec, AVCodecContext, AVDictionary, AVFormatContext, AVFrame, AVInputFormat, AVMediaType_AVMEDIA_TYPE_VIDEO, AVPacket, AVPicture, AVPixelFormat, AVPixelFormat_AV_PIX_FMT_RGB24, AVPixelFormat_AV_PIX_FMT_YUYV422, AVPixelFormat_AV_PIX_FMT_YVYU422, AVStream, SwsContext, SWS_FAST_BILINEAR
+    av_dict_free, av_dict_set, av_find_input_format, av_frame_alloc, av_frame_free, av_frame_get_buffer, av_free, av_get_padded_bits_per_pixel, av_malloc, av_packet_alloc, av_packet_free, av_packet_unref, av_pix_fmt_desc_get, av_read_frame, av_register_all, avcodec_alloc_context3, avcodec_copy_context, avcodec_find_decoder, avcodec_free_context, avcodec_open2, avcodec_receive_frame, avcodec_send_packet, avdevice_register_all, avformat_find_stream_info, avformat_open_input, avpicture_fill, avpicture_free, sws_freeContext, sws_getContext, sws_scale, AVCodecContext, AVDictionary, AVFormatContext, AVFrame, AVInputFormat, AVMediaType_AVMEDIA_TYPE_VIDEO, AVPacket, AVPicture, AVPixelFormat, AVPixelFormat_AV_PIX_FMT_RGB24, AVPixelFormat_AV_PIX_FMT_YUYV422, AVStream, SwsContext, SWS_FAST_BILINEAR
 };
 
 mod sys;
@@ -245,7 +245,7 @@ impl Stream {
             return None;
         }
         unsafe { avcodec_open2(decoder, codec, null_mut()) };
-        Some(Decoder { decoder, codec })
+        Some(Decoder { decoder })
     }
 }
 
@@ -259,7 +259,6 @@ pub enum ReceiveResult {
 
 pub struct Decoder {
     decoder: *mut AVCodecContext,
-    codec: *mut AVCodec,
 }
 
 impl Decoder {
