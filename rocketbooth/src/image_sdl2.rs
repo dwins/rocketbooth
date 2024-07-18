@@ -1,8 +1,6 @@
 use std::path::Path;
 
-use sdl2::{
-    render::{Texture, TextureCreator},
-};
+use sdl2::render::{Texture, TextureCreator};
 
 pub fn image_to_texture<T>(
     path: impl AsRef<Path>,

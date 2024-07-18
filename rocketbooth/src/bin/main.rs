@@ -22,7 +22,7 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut event_pump = sdl_context.event_pump()?;
     loop {
         for event in event_pump.poll_iter() {
-            state.handle_event(event)?;
+            state = state.handle_event(event, &mut context)?;
         }
         state.render(&mut canvas, &mut context)?;
         // The rest of the game loop goes here...
