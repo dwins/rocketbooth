@@ -8,14 +8,13 @@ use libc::{EAGAIN, EINVAL};
 use sys::{
     av_dict_free, av_dict_set, av_find_input_format, av_frame_alloc, av_frame_free,
     av_frame_get_buffer, av_free, av_get_padded_bits_per_pixel, av_malloc, av_packet_alloc,
-    av_packet_free, av_packet_unref, av_pix_fmt_desc_get, av_read_frame, av_register_all,
-    avcodec_alloc_context3, avcodec_copy_context, avcodec_find_decoder, avcodec_free_context,
-    avcodec_open2, avcodec_receive_frame, avcodec_send_packet, avdevice_register_all,
-    avformat_find_stream_info, avformat_open_input, avpicture_fill, avpicture_free,
-    sws_freeContext, sws_getContext, sws_scale, AVCodecContext, AVDictionary, AVFormatContext,
-    AVFrame, AVInputFormat, AVMediaType_AVMEDIA_TYPE_VIDEO, AVPacket, AVPicture, AVPixelFormat,
-    AVPixelFormat_AV_PIX_FMT_RGB24, AVPixelFormat_AV_PIX_FMT_YUYV422, AVStream, SwsContext,
-    SWS_FAST_BILINEAR,
+    av_packet_free, av_packet_unref, av_pix_fmt_desc_get, av_read_frame, avcodec_alloc_context3,
+    avcodec_copy_context, avcodec_find_decoder, avcodec_free_context, avcodec_open2,
+    avcodec_parameters_to_context, avcodec_receive_frame, avcodec_send_packet,
+    avdevice_register_all, avformat_find_stream_info, avformat_open_input, sws_freeContext,
+    sws_getContext, sws_scale, AVCodecContext, AVDictionary, AVFormatContext, AVFrame,
+    AVInputFormat, AVMediaType_AVMEDIA_TYPE_VIDEO, AVPacket, AVPixelFormat_AV_PIX_FMT_RGB24,
+    AVPixelFormat_AV_PIX_FMT_YUYV422, AVStream, SwsContext, SWS_FAST_BILINEAR,
 };
 
 mod sys;
@@ -84,27 +83,6 @@ impl Drop for Buffer {
     }
 }
 
-pub struct Picture(AVPicture);
-
-impl Picture {
-    pub fn new(format: AVPixelFormat, buf: &[u8], width: i32, height: i32) -> Self {
-        let mut av_picture = AVPicture {
-            data: [null_mut(); 8],
-            linesize: [0; 8],
-        };
-        unsafe {
-            avpicture_fill(&mut av_picture, buf.as_ptr(), format, width, height);
-        }
-        Picture(av_picture)
-    }
-}
-
-impl Drop for Picture {
-    fn drop(&mut self) {
-        unsafe { avpicture_free(&mut self.0) }
-    }
-}
-
 static FORMAT_INIT: std::sync::Once = std::sync::Once::new();
 
 pub struct Format(*mut AVInputFormat);
@@ -112,13 +90,12 @@ pub struct Format(*mut AVInputFormat);
 impl Format {
     pub fn from_name(name: &str) -> Option<Self> {
         FORMAT_INIT.call_once(|| unsafe {
-            av_register_all();
             avdevice_register_all();
         });
         let name = CString::new(name).ok()?;
         Some(unsafe { av_find_input_format(name.as_ptr()) })
             .filter(|ptr| !ptr.is_null())
-            .map(Self)
+            .map(|ptr| Self(ptr))
     }
 }
 
@@ -220,7 +197,10 @@ impl Frame {
             let ptr = (*self.0).data[0];
             let pix_desc = av_pix_fmt_desc_get(self.format());
             let bits_per_pixel = av_get_padded_bits_per_pixel(pix_desc);
-            slice::from_raw_parts(ptr, self.width() * self.height() * bits_per_pixel as usize / 8)
+            slice::from_raw_parts(
+                ptr,
+                self.width() * self.height() * bits_per_pixel as usize / 8,
+            )
         }
     }
 }
@@ -244,13 +224,13 @@ impl Stream {
     }
 
     pub fn create_decoder(&self) -> Option<Decoder> {
-        let borrowed_codec = unsafe { (*self.0).codec };
+        let borrowed_codec = unsafe { (*self.0).codecpar };
         let codec = unsafe { avcodec_find_decoder((*borrowed_codec).codec_id) };
         if codec.is_null() {
             return None;
         }
         let decoder = unsafe { avcodec_alloc_context3(codec) };
-        let status = unsafe { avcodec_copy_context(decoder, borrowed_codec) };
+        let status = unsafe { avcodec_parameters_to_context(decoder, borrowed_codec) };
         if status != 0 {
             return None;
         }
