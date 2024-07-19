@@ -9,12 +9,12 @@ use sys::{
     av_dict_free, av_dict_set, av_find_input_format, av_frame_alloc, av_frame_free,
     av_frame_get_buffer, av_free, av_get_padded_bits_per_pixel, av_malloc, av_packet_alloc,
     av_packet_free, av_packet_unref, av_pix_fmt_desc_get, av_read_frame, avcodec_alloc_context3,
-    avcodec_copy_context, avcodec_find_decoder, avcodec_free_context, avcodec_open2,
-    avcodec_parameters_to_context, avcodec_receive_frame, avcodec_send_packet,
-    avdevice_register_all, avformat_find_stream_info, avformat_open_input, sws_freeContext,
-    sws_getContext, sws_scale, AVCodecContext, AVDictionary, AVFormatContext, AVFrame,
-    AVInputFormat, AVMediaType_AVMEDIA_TYPE_VIDEO, AVPacket, AVPixelFormat_AV_PIX_FMT_RGB24,
-    AVPixelFormat_AV_PIX_FMT_YUYV422, AVStream, SwsContext, SWS_FAST_BILINEAR,
+    avcodec_find_decoder, avcodec_free_context, avcodec_open2, avcodec_parameters_to_context,
+    avcodec_receive_frame, avcodec_send_packet, avdevice_register_all, avformat_find_stream_info,
+    avformat_open_input, sws_freeContext, sws_getContext, sws_scale, AVCodecContext, AVDictionary,
+    AVFormatContext, AVFrame, AVInputFormat, AVMediaType_AVMEDIA_TYPE_VIDEO, AVPacket,
+    AVPixelFormat_AV_PIX_FMT_RGB24, AVPixelFormat_AV_PIX_FMT_YUYV422, AVStream, SwsContext,
+    SWS_FAST_BILINEAR,
 };
 
 mod sys;
@@ -95,7 +95,7 @@ impl Format {
         let name = CString::new(name).ok()?;
         Some(unsafe { av_find_input_format(name.as_ptr()) })
             .filter(|ptr| !ptr.is_null())
-            .map(|ptr| Self(ptr))
+            .map(|ptr| Self(ptr as _))
     }
 }
 
@@ -219,7 +219,7 @@ impl Stream {
     }
 
     pub fn is_video(&self) -> bool {
-        let codec_type = unsafe { (*(*self.0).codec).codec_type };
+        let codec_type = unsafe { (*(*self.0).codecpar).codec_type };
         codec_type == AVMediaType_AVMEDIA_TYPE_VIDEO
     }
 
