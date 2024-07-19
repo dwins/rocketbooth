@@ -13,11 +13,17 @@ pub fn frame_to_texture<'t, T>(
     frame: &Frame,
     texture_creator: &'t TextureCreator<T>,
 ) -> Result<(FrameTextureUpdater, Texture<'t>), Box<dyn std::error::Error>> {
-    let mut updater = FrameTextureUpdater { scaler: None };
+    let mut updater = FrameTextureUpdater {
+        scaler: None,
+        update_via: UpdateVia::RGB,
+    };
 
     let format = if frame.is_rgb24() {
         Some(PixelFormatEnum::RGB24)
-    } else {
+    } else if frame.is_yuv420p() {
+        updater.update_via = UpdateVia::YUV;
+        Some(PixelFormatEnum::IYUV)
+    } else if frame.is_any_rgb_format() {
         let dest = Frame::alloc_rgb24(frame.width() as i32, frame.height() as i32)
             .ok_or("Allocating temporary frame failed")?;
         let scaler = ScalingContext::new(
@@ -30,11 +36,25 @@ pub fn frame_to_texture<'t, T>(
         );
         updater.scaler = Some((scaler, dest));
         Some(PixelFormatEnum::RGB24)
+    } else {
+        let dest = Frame::alloc_yuv420p(frame.width() as i32, frame.height() as i32)
+            .ok_or("Allocating temporary frame failed")?;
+        let scaler = ScalingContext::new(
+            frame.width() as i32,
+            frame.height() as i32,
+            frame.format(),
+            frame.width() as i32,
+            frame.height() as i32,
+            dest.format(),
+        );
+        updater.scaler = Some((scaler, dest));
+        updater.update_via = UpdateVia::YUV;
+        Some(PixelFormatEnum::IYUV)
     };
 
     let mut texture = texture_creator.create_texture(
         format,
-        sdl2::render::TextureAccess::Static,
+        sdl2::render::TextureAccess::Streaming,
         frame.width() as u32,
         frame.height() as u32,
     )?;
@@ -44,8 +64,14 @@ pub fn frame_to_texture<'t, T>(
     Ok((updater, texture))
 }
 
+enum UpdateVia {
+    RGB,
+    YUV,
+}
+
 pub struct FrameTextureUpdater {
     scaler: Option<(ScalingContext, Frame)>,
+    update_via: UpdateVia,
 }
 
 impl FrameTextureUpdater {
@@ -60,7 +86,21 @@ impl FrameTextureUpdater {
         });
 
         let frame = scaled_frame.unwrap_or(frame);
-        texture.update(None, frame.samples(), frame.pitch())?;
+        match self.update_via {
+            UpdateVia::RGB => texture.update(None, frame.samples(), frame.pitch())?,
+            UpdateVia::YUV => {
+                let yuv_samples = frame.yuv_samples();
+                texture.update_yuv(
+                    None,
+                    yuv_samples.y_samples,
+                    yuv_samples.y_pitch,
+                    yuv_samples.u_samples,
+                    yuv_samples.u_pitch,
+                    yuv_samples.v_samples,
+                    yuv_samples.v_pitch,
+                )?;
+            }
+        }
         Ok(())
     }
 }
@@ -80,8 +120,9 @@ impl<'t, T> FrameTextureManager<'t, T> {
         let path = path.to_owned();
         let updater_and_texture = None;
         let (sender, receiver) = sync_channel::<Frame>(0);
-        let reader_thread_handle =
-            std::thread::spawn(move || {Self::read_video_frames(&path, sender).ok();});
+        let reader_thread_handle = std::thread::spawn(move || {
+            Self::read_video_frames(&path, sender).ok();
+        });
         Ok(Self {
             frame: None,
             receiver,

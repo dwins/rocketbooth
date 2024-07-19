@@ -1,6 +1,6 @@
 use core::slice;
 use std::{
-    ffi::{CString, NulError},
+    ffi::{CStr, CString, NulError},
     ptr::null_mut,
 };
 
@@ -13,8 +13,8 @@ use sys::{
     avcodec_receive_frame, avcodec_send_packet, avdevice_register_all, avformat_find_stream_info,
     avformat_open_input, sws_freeContext, sws_getContext, sws_scale, AVCodecContext, AVDictionary,
     AVFormatContext, AVFrame, AVInputFormat, AVMediaType_AVMEDIA_TYPE_VIDEO, AVPacket,
-    AVPixelFormat_AV_PIX_FMT_RGB24, AVPixelFormat_AV_PIX_FMT_YUYV422, AVStream, SwsContext,
-    SWS_FAST_BILINEAR,
+    AVPixelFormat, AVPixelFormat_AV_PIX_FMT_RGB24, AVPixelFormat_AV_PIX_FMT_YUV420P, AVStream,
+    SwsContext, AV_PIX_FMT_FLAG_RGB, SWS_FAST_BILINEAR,
 };
 
 mod sys;
@@ -147,7 +147,7 @@ impl Frame {
             .map(Self)
     }
 
-    pub fn alloc_rgb24(width: i32, height: i32) -> Option<Self> {
+    fn alloc(width: i32, height: i32, format: AVPixelFormat) -> Option<Self> {
         let ptr = unsafe { av_frame_alloc() };
         if ptr.is_null() {
             return None;
@@ -155,7 +155,7 @@ impl Frame {
         unsafe {
             (*ptr).width = width;
             (*ptr).height = height;
-            (*ptr).format = AVPixelFormat_AV_PIX_FMT_RGB24;
+            (*ptr).format = format;
         }
         if unsafe { av_frame_get_buffer(ptr, 0) } != 0 {
             return None;
@@ -163,20 +163,42 @@ impl Frame {
         Some(Self(ptr))
     }
 
+    pub fn alloc_rgb24(width: i32, height: i32) -> Option<Self> {
+        Self::alloc(width, height, AVPixelFormat_AV_PIX_FMT_RGB24)
+    }
+
+    pub fn alloc_yuv420p(width: i32, height: i32) -> Option<Self> {
+        Self::alloc(width, height, AVPixelFormat_AV_PIX_FMT_YUV420P)
+    }
+
     pub fn id(&self) -> i64 {
         unsafe { *(self.0) }.pkt_pos
     }
 
-    pub fn is_yuyv422(&self) -> bool {
-        self.format() == AVPixelFormat_AV_PIX_FMT_YUYV422
+    pub fn is_yuv420p(&self) -> bool {
+        self.format() == AVPixelFormat_AV_PIX_FMT_YUV420P
     }
 
     pub fn is_rgb24(&self) -> bool {
         self.format() == AVPixelFormat_AV_PIX_FMT_RGB24
     }
 
+    pub fn is_any_rgb_format(&self) -> bool {
+        let pix_desc = unsafe { &*av_pix_fmt_desc_get(self.format()) };
+        pix_desc.flags & AV_PIX_FMT_FLAG_RGB as u64 != 0
+    }
+
     pub fn format(&self) -> i32 {
         unsafe { *self.0 }.format
+    }
+
+    pub fn format_name(&self) -> String {
+        let pix_desc = unsafe { av_pix_fmt_desc_get(self.format()) };
+        unsafe {
+            CStr::from_ptr((*pix_desc).name)
+                .to_string_lossy()
+                .into_owned()
+        }
     }
 
     pub fn height(&self) -> usize {
@@ -203,6 +225,31 @@ impl Frame {
             )
         }
     }
+
+    pub fn yuv_samples(&self) -> YuvSamples {
+        unsafe {
+            let data = &(*self.0).data;
+            let linesize = &(*self.0).linesize;
+            let height = self.height();
+            YuvSamples {
+                y_samples: slice::from_raw_parts(data[0], linesize[0] as usize * height),
+                y_pitch: linesize[0] as usize,
+                u_samples: slice::from_raw_parts(data[1], linesize[1] as usize * height / 2),
+                u_pitch: linesize[1] as usize,
+                v_samples: slice::from_raw_parts(data[2], linesize[2] as usize * height / 2),
+                v_pitch: linesize[2] as usize,
+            }
+        }
+    }
+}
+
+pub struct YuvSamples<'t> {
+    pub y_samples: &'t [u8],
+    pub y_pitch: usize,
+    pub u_samples: &'t [u8],
+    pub u_pitch: usize,
+    pub v_samples: &'t [u8],
+    pub v_pitch: usize,
 }
 
 impl Drop for Frame {
