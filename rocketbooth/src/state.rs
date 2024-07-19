@@ -6,7 +6,7 @@ use sdl2::{
     render::{Canvas, RenderTarget, Texture, TextureCreator},
 };
 
-use crate::{image_sdl2::image_to_texture, libav_sdl2::FrameTextureManager};
+use crate::{image_libav::frame_to_image, image_sdl2::image_to_texture, libav_sdl2::FrameTextureManager};
 
 pub enum State<'t, T> {
     Waiting,
@@ -45,7 +45,13 @@ impl<'t, T> State<'t, T> {
                         context.texture_creator,
                     )?),
                     State::Explainer(texture_manager) => State::Capture(texture_manager),
-                    State::Capture(_) => State::Debrief,
+                    State::Capture(texture_manager) => {
+                        if let Some(frame) = texture_manager.frame_ref() {
+                            let img = frame_to_image(frame)?;
+                            img.save_with_format("./img.jpg", image::ImageFormat::Jpeg)?;
+                        }
+                        State::Debrief
+                    },
                     State::Debrief => State::Waiting,
                 })
             }

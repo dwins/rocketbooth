@@ -17,8 +17,6 @@ pub fn frame_to_texture<'t, T>(
 
     let format = if frame.is_rgb24() {
         Some(PixelFormatEnum::RGB24)
-    } else if frame.is_yuyv422() {
-        Some(PixelFormatEnum::YUY2)
     } else {
         let dest = Frame::alloc_rgb24(frame.width() as i32, frame.height() as i32)
             .ok_or("Allocating temporary frame failed")?;
@@ -68,10 +66,10 @@ impl FrameTextureUpdater {
 }
 
 pub struct FrameTextureManager<'t, T> {
+    frame: Option<Frame>,
+    receiver: Receiver<Frame>,
     texture_creator: &'t TextureCreator<T>,
     updater_and_texture: Option<(FrameTextureUpdater, Texture<'t>)>,
-    receiver: Receiver<Frame>,
-    reader_thread_handle: JoinHandle<()>,
 }
 
 impl<'t, T> FrameTextureManager<'t, T> {
@@ -82,15 +80,18 @@ impl<'t, T> FrameTextureManager<'t, T> {
         let path = path.to_owned();
         let updater_and_texture = None;
         let (sender, receiver) = sync_channel::<Frame>(0);
-        let reader_thread_handle = std::thread::spawn(move || {
-            Self::read_video_frames(&path, sender);
-        });
+        let reader_thread_handle =
+            std::thread::spawn(move || {Self::read_video_frames(&path, sender).ok();});
         Ok(Self {
+            frame: None,
+            receiver,
             texture_creator,
             updater_and_texture,
-            receiver,
-            reader_thread_handle,
         })
+    }
+
+    pub fn frame_ref(&self) -> Option<&Frame> {
+        self.frame.as_ref()
     }
 
     pub fn texture_ref(&mut self) -> Option<&Texture<'t>> {
@@ -101,6 +102,7 @@ impl<'t, T> FrameTextureManager<'t, T> {
                     self.updater_and_texture = frame_to_texture(&frame, &self.texture_creator).ok()
                 }
             }
+            self.frame.insert(frame);
         }
         self.updater_and_texture
             .as_ref()
