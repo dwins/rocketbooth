@@ -26,7 +26,5 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         state.render(&mut canvas, &mut context)?;
         // The rest of the game loop goes here...
-
-        ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
     }
 }
