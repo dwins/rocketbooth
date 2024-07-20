@@ -1,0 +1,14 @@
+[video_source]
+path = "/dev/video0"
+format = "v4l2"
+
+[video_source.options]
+framerate = "10"
+video_size = "1920x1080"
+input_format = "mjpeg"
+
+[image]
+prefix = "pb_"
+
+[print]
+enable = false

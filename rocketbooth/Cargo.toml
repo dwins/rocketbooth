@@ -7,3 +7,5 @@ edition = "2021"
 image = "0.25.1"
 rocketbooth-libav = { version = "0.1.0", path = "../rocketbooth-libav" }
 sdl2 = { version = "0.37.0", features = ["use-bindgen"] }
+serde = { version = "1.0.204", features = ["derive"] }
+toml = { version = "0.8.15", features = ["display"] }

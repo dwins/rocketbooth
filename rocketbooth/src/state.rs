@@ -10,6 +10,7 @@ use sdl2::{
 
 use crate::{
     image_libav::frame_to_image, image_sdl2::image_to_texture, libav_sdl2::FrameTextureManager,
+    Config,
 };
 
 pub enum State<'t, T> {
@@ -59,7 +60,7 @@ impl<'t, T> State<'t, T> {
                         },
                         State::Welcome { .. } => State::Explainer {
                             frame_texture_manager: FrameTextureManager::new(
-                                "/mnt/c/Users/cdwin/Downloads/VID_20171212_211842.mp4",
+                                &context.config.video_source.path,
                                 context.texture_creator,
                             )?,
                             deadline: now + Duration::from_secs(30),
@@ -71,16 +72,7 @@ impl<'t, T> State<'t, T> {
                             frame_texture_manager,
                             deadline: now + Duration::from_secs(3),
                         },
-                        State::Capture {
-                            frame_texture_manager,
-                            ..
-                        } => {
-                            if let Some(frame) = frame_texture_manager.frame_ref() {
-                                let img = frame_to_image(frame)?;
-                                img.save_with_format("./img.jpg", image::ImageFormat::Jpeg)?;
-                            }
-                            State::Debrief
-                        }
+                        x @ State::Capture { .. } => x,
                         State::Debrief => State::Welcome {
                             deadline: Instant::now() + Duration::from_secs(3),
                         },
@@ -100,7 +92,31 @@ impl<'t, T> State<'t, T> {
             } if deadline < now => {
                 if let Some(frame) = frame_texture_manager.frame_ref() {
                     let img = frame_to_image(frame)?;
-                    img.save_with_format("./img.jpg", image::ImageFormat::Jpeg)?;
+                    let prefix = context
+                        .config
+                        .image
+                        .as_ref()
+                        .and_then(|img| img.prefix.as_ref())
+                        .map(|s| s.as_str())
+                        .unwrap_or("");
+                    let format = context
+                        .config
+                        .image
+                        .as_ref()
+                        .and_then(|img| img.format.as_ref())
+                        .map(|s| s.as_str())
+                        .unwrap_or("");
+                    let format = if format == "PNG" {
+                        image::ImageFormat::Png
+                    } else {
+                        image::ImageFormat::Jpeg
+                    };
+                    let suffix = if format == image::ImageFormat::Png {
+                        "png"
+                    } else {
+                        "jpg"
+                    };
+                    img.save_with_format(format!("{prefix}img.{suffix}"), format)?;
                 }
                 State::Debrief
             }
@@ -160,6 +176,7 @@ impl<'t, T> State<'t, T> {
 }
 
 pub struct Context<'t, T> {
+    config: Config,
     texture_creator: &'t TextureCreator<T>,
     prompt01: Texture<'t>,
     prompt02: Texture<'t>,
@@ -168,12 +185,16 @@ pub struct Context<'t, T> {
 }
 
 impl<'t, T> Context<'t, T> {
-    pub fn new(texture_creator: &'t TextureCreator<T>) -> Result<Self, Box<dyn std::error::Error>> {
+    pub fn new(
+        config: Config,
+        texture_creator: &'t TextureCreator<T>,
+    ) -> Result<Self, Box<dyn std::error::Error>> {
         let prompt01 = image_to_texture("./prompts/prompts.001.png", texture_creator)?;
         let prompt02 = image_to_texture("./prompts/prompts.002.png", texture_creator)?;
         let prompt03 = image_to_texture("./prompts/prompts.003.png", texture_creator)?;
         let prompt04 = image_to_texture("./prompts/prompts.004.png", texture_creator)?;
         Ok(Self {
+            config,
             texture_creator,
             prompt01,
             prompt02,
