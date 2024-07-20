@@ -20,6 +20,8 @@ use sys::{
 mod sys;
 pub struct Dictionary(*mut AVDictionary);
 
+unsafe impl Send for Dictionary {}
+
 impl Dictionary {
     pub fn set(&mut self, key: &str, value: &str) -> Result<(), NulError> {
         let key = CString::new(key)?;
@@ -28,6 +30,21 @@ impl Dictionary {
             av_dict_set(&mut self.0, key.as_ptr(), value.as_ptr(), 0);
         }
         Ok(())
+    }
+}
+
+impl<S0, S1, T> From<T> for Dictionary
+where
+    S0: AsRef<str>,
+    S1: AsRef<str>,
+    T: IntoIterator<Item = (S0, S1)>,
+{
+    fn from(value: T) -> Self {
+        let mut result = Dictionary::default();
+        for (key, value) in value {
+            result.insert(key.as_ref(), value.as_ref());
+        }
+        result
     }
 }
 
@@ -40,6 +57,20 @@ impl Default for Dictionary {
 impl Drop for Dictionary {
     fn drop(&mut self) {
         unsafe { av_dict_free(&mut self.0) }
+    }
+}
+
+impl Dictionary {
+    pub fn insert(&mut self, key: &str, value: &str) {
+        #[allow(temporary_cstring_as_ptr)]
+        unsafe {
+            av_dict_set(
+                &mut self.0,
+                CString::new(key).unwrap().as_ptr(),
+                CString::new(value).unwrap().as_ptr(),
+                0,
+            );
+        }
     }
 }
 
@@ -86,6 +117,8 @@ impl Drop for Buffer {
 static FORMAT_INIT: std::sync::Once = std::sync::Once::new();
 
 pub struct Format(*mut AVInputFormat);
+
+unsafe impl Send for Format {}
 
 impl Format {
     pub fn from_name(name: &str) -> Option<Self> {

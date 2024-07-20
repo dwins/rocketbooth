@@ -1,6 +1,6 @@
 use std::sync::mpsc::{sync_channel, Receiver, SyncSender};
 
-use rocketbooth_libav::{FormatContext, Frame, Packet, ReceiveResult, ScalingContext};
+use rocketbooth_libav::{Dictionary, Format, FormatContext, Frame, Packet, ReceiveResult, ScalingContext};
 use sdl2::{
     pixels::PixelFormatEnum,
     render::{Texture, TextureCreator},
@@ -112,13 +112,15 @@ pub struct FrameTextureManager<'t, T> {
 impl<'t, T> FrameTextureManager<'t, T> {
     pub fn new(
         path: &str,
+        format: Option<Format>,
+        options: Option<Dictionary>,
         texture_creator: &'t TextureCreator<T>,
     ) -> Result<Self, Box<dyn std::error::Error>> {
         let path = path.to_owned();
         let updater_and_texture = None;
         let (sender, receiver) = sync_channel::<Frame>(0);
         std::thread::spawn(move || {
-            Self::read_video_frames(&path, sender).ok();
+            Self::read_video_frames(&path, format, options, sender).ok();
         });
         Ok(Self {
             frame: None,
@@ -149,9 +151,11 @@ impl<'t, T> FrameTextureManager<'t, T> {
 
     fn read_video_frames(
         src: &str,
+        format: Option<Format>,
+        options: Option<Dictionary>,
         sender: SyncSender<Frame>,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        let mut context = FormatContext::open(src, None, None).ok_or("Failed to open file")?;
+        let mut context = FormatContext::open(src, format, options).ok_or("Failed to open file")?;
         context.find_stream_info();
         let video_stream = context
             .streams()
