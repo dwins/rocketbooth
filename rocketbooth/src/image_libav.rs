@@ -15,7 +15,7 @@ pub fn frame_to_image(frame: &Frame) -> Result<image::RgbImage, Box<dyn std::err
             dest.format(),
         );
         scaler.scale(frame, &mut dest);
-        scaled_frame.insert(dest);
+        scaled_frame = Some(dest);
     }
 
     let frame = scaled_frame.as_ref().unwrap_or(frame);

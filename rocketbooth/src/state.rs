@@ -1,18 +1,30 @@
+use std::time::{Duration, Instant};
+
 use sdl2::{
-    event::Event,
+    event::{Event, EventPollIterator},
     keyboard::Keycode,
     mouse::MouseButton,
     pixels::Color,
     render::{Canvas, RenderTarget, Texture, TextureCreator},
 };
 
-use crate::{image_libav::frame_to_image, image_sdl2::image_to_texture, libav_sdl2::FrameTextureManager};
+use crate::{
+    image_libav::frame_to_image, image_sdl2::image_to_texture, libav_sdl2::FrameTextureManager,
+};
 
 pub enum State<'t, T> {
     Waiting,
-    Welcome,
-    Explainer(FrameTextureManager<'t, T>),
-    Capture(FrameTextureManager<'t, T>),
+    Welcome {
+        deadline: Instant,
+    },
+    Explainer {
+        frame_texture_manager: FrameTextureManager<'t, T>,
+        deadline: Instant,
+    },
+    Capture {
+        frame_texture_manager: FrameTextureManager<'t, T>,
+        deadline: Instant,
+    },
     Debrief,
 }
 
@@ -25,39 +37,75 @@ impl<'t, T> Default for State<'t, T> {
 impl<'t, T> State<'t, T> {
     pub fn handle_event(
         self,
-        event: Event,
+        events: EventPollIterator,
         context: &mut Context<'t, T>,
     ) -> Result<Self, Box<dyn std::error::Error>> {
-        match event {
-            Event::Quit { .. }
-            | Event::KeyDown {
-                keycode: Some(Keycode::Escape),
-                ..
-            } => return Result::Err("Shutdown".into()),
-            Event::MouseButtonDown {
-                mouse_btn: MouseButton::Left,
-                ..
-            } => {
-                return Ok(match self {
-                    State::Waiting => State::Welcome,
-                    State::Welcome => State::Explainer(FrameTextureManager::new(
-                        "/mnt/c/Users/cdwin/Downloads/VID_20171212_211842.mp4",
-                        context.texture_creator,
-                    )?),
-                    State::Explainer(texture_manager) => State::Capture(texture_manager),
-                    State::Capture(texture_manager) => {
-                        if let Some(frame) = texture_manager.frame_ref() {
-                            let img = frame_to_image(frame)?;
-                            img.save_with_format("./img.jpg", image::ImageFormat::Jpeg)?;
+        let now = std::time::Instant::now();
+
+        for event in events {
+            match event {
+                Event::Quit { .. }
+                | Event::KeyDown {
+                    keycode: Some(Keycode::Escape | Keycode::Q),
+                    ..
+                } => return Result::Err("Shutdown".into()),
+                Event::MouseButtonDown {
+                    mouse_btn: MouseButton::Left,
+                    ..
+                } => {
+                    return Ok(match self {
+                        State::Waiting => State::Welcome {
+                            deadline: now + Duration::from_secs(3),
+                        },
+                        State::Welcome { .. } => State::Explainer {
+                            frame_texture_manager: FrameTextureManager::new(
+                                "/mnt/c/Users/cdwin/Downloads/VID_20171212_211842.mp4",
+                                context.texture_creator,
+                            )?,
+                            deadline: now + Duration::from_secs(30),
+                        },
+                        State::Explainer {
+                            frame_texture_manager,
+                            ..
+                        } => State::Capture {
+                            frame_texture_manager,
+                            deadline: now + Duration::from_secs(3),
+                        },
+                        State::Capture {
+                            frame_texture_manager,
+                            ..
+                        } => {
+                            if let Some(frame) = frame_texture_manager.frame_ref() {
+                                let img = frame_to_image(frame)?;
+                                img.save_with_format("./img.jpg", image::ImageFormat::Jpeg)?;
+                            }
+                            State::Debrief
                         }
-                        State::Debrief
-                    },
-                    State::Debrief => State::Waiting,
-                })
+                        State::Debrief => State::Welcome {
+                            deadline: Instant::now() + Duration::from_secs(3),
+                        },
+                    })
+                }
+                _ => {}
             }
-            _ => {}
         }
-        Ok(self)
+
+        Ok(match self {
+            State::Welcome { deadline } | State::Explainer { deadline, .. } if deadline < now => {
+                State::Waiting
+            }
+            State::Capture {
+                deadline,
+                frame_texture_manager,
+            } if deadline < now => {
+                if let Some(frame) = frame_texture_manager.frame_ref() {
+                    let img = frame_to_image(frame)?;
+                    img.save_with_format("./img.jpg", image::ImageFormat::Jpeg)?;
+                }
+                State::Debrief
+            }
+            _ => self,
+        })
     }
 
     pub fn render<U>(
@@ -74,12 +122,15 @@ impl<'t, T> State<'t, T> {
                 canvas.clear();
                 canvas.present();
             }
-            State::Welcome => {
+            State::Welcome { .. } => {
                 canvas.clear();
                 canvas.copy(&context.prompt01, None, None)?;
                 canvas.present();
             }
-            State::Explainer(frame_texture_manager) => {
+            State::Explainer {
+                frame_texture_manager,
+                ..
+            } => {
                 canvas.clear();
                 if let Some(texture) = frame_texture_manager.texture_ref() {
                     canvas.copy(texture, None, None)?;
@@ -87,7 +138,10 @@ impl<'t, T> State<'t, T> {
                 canvas.copy(&context.prompt02, None, None)?;
                 canvas.present();
             }
-            State::Capture(frame_texture_manager) => {
+            State::Capture {
+                frame_texture_manager,
+                ..
+            } => {
                 canvas.clear();
                 if let Some(texture) = frame_texture_manager.texture_ref() {
                     canvas.copy(texture, None, None)?;

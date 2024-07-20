@@ -1,7 +1,4 @@
-use std::{
-    sync::mpsc::{sync_channel, Receiver, SyncSender},
-    thread::JoinHandle,
-};
+use std::sync::mpsc::{sync_channel, Receiver, SyncSender};
 
 use rocketbooth_libav::{FormatContext, Frame, Packet, ReceiveResult, ScalingContext};
 use sdl2::{
@@ -15,13 +12,13 @@ pub fn frame_to_texture<'t, T>(
 ) -> Result<(FrameTextureUpdater, Texture<'t>), Box<dyn std::error::Error>> {
     let mut updater = FrameTextureUpdater {
         scaler: None,
-        update_via: UpdateVia::RGB,
+        update_via: UpdateVia::Rgb,
     };
 
     let format = if frame.is_rgb24() {
         Some(PixelFormatEnum::RGB24)
     } else if frame.is_yuv420p() {
-        updater.update_via = UpdateVia::YUV;
+        updater.update_via = UpdateVia::Yuv;
         Some(PixelFormatEnum::IYUV)
     } else if frame.is_any_rgb_format() {
         let dest = Frame::alloc_rgb24(frame.width() as i32, frame.height() as i32)
@@ -48,7 +45,7 @@ pub fn frame_to_texture<'t, T>(
             dest.format(),
         );
         updater.scaler = Some((scaler, dest));
-        updater.update_via = UpdateVia::YUV;
+        updater.update_via = UpdateVia::Yuv;
         Some(PixelFormatEnum::IYUV)
     };
 
@@ -65,8 +62,8 @@ pub fn frame_to_texture<'t, T>(
 }
 
 enum UpdateVia {
-    RGB,
-    YUV,
+    Rgb,
+    Yuv,
 }
 
 pub struct FrameTextureUpdater {
@@ -87,8 +84,8 @@ impl FrameTextureUpdater {
 
         let frame = scaled_frame.unwrap_or(frame);
         match self.update_via {
-            UpdateVia::RGB => texture.update(None, frame.samples(), frame.pitch())?,
-            UpdateVia::YUV => {
+            UpdateVia::Rgb => texture.update(None, frame.samples(), frame.pitch())?,
+            UpdateVia::Yuv => {
                 let yuv_samples = frame.yuv_samples();
                 texture.update_yuv(
                     None,
@@ -120,7 +117,7 @@ impl<'t, T> FrameTextureManager<'t, T> {
         let path = path.to_owned();
         let updater_and_texture = None;
         let (sender, receiver) = sync_channel::<Frame>(0);
-        let reader_thread_handle = std::thread::spawn(move || {
+        std::thread::spawn(move || {
             Self::read_video_frames(&path, sender).ok();
         });
         Ok(Self {
@@ -140,10 +137,10 @@ impl<'t, T> FrameTextureManager<'t, T> {
             match self.updater_and_texture.as_mut() {
                 Some((updater, texture)) => updater.update(&frame, texture).ok()?,
                 None => {
-                    self.updater_and_texture = frame_to_texture(&frame, &self.texture_creator).ok()
+                    self.updater_and_texture = frame_to_texture(&frame, self.texture_creator).ok()
                 }
             }
-            self.frame.insert(frame);
+            self.frame = Some(frame);
         }
         self.updater_and_texture
             .as_ref()

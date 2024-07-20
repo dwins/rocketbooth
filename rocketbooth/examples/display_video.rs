@@ -4,7 +4,6 @@ use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::render::Texture;
 use std::sync::mpsc::{sync_channel, SyncSender};
-use std::thread::Thread;
 use std::time::Duration;
 
 pub fn main() -> Result<(), Box<dyn std::error::Error>> {
