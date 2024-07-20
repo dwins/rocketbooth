@@ -1,11 +1,12 @@
 [video_source]
-path = "/dev/video0"
-format = "v4l2"
+#path = "/dev/video0"
+path = "/mnt/c/Users/cdwin/Downloads/VID_20171212_211842.mp4"
+# format = "v4l2"
 
 [video_source.options]
-framerate = "10"
+# framerate = "10"
 video_size = "1920x1080"
-input_format = "mjpeg"
+# input_format = "mjpeg"
 
 [image]
 prefix = "pb_"

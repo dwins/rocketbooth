@@ -138,14 +138,16 @@ impl FormatContext {
     pub fn open(
         path: &str,
         format: Option<Format>,
-        options: Option<Dictionary>,
+        mut options: Option<Dictionary>,
     ) -> Option<FormatContext> {
         let mut context = null_mut();
         let path = CString::new(path).ok()?;
         let format = format.map_or(null_mut(), |fmt| fmt.0);
-        let mut options = options.map_or(null_mut(), |dict| dict.0);
-        let status =
-            unsafe { avformat_open_input(&mut context, path.as_ptr(), format, &mut options) };
+        let mut fallback_options = null_mut();
+        let options = options
+            .as_mut()
+            .map_or(&mut fallback_options, |dict| &mut dict.0);
+        let status = unsafe { avformat_open_input(&mut context, path.as_ptr(), format, options) };
         if status == 0 {
             Some(FormatContext(context))
         } else {
