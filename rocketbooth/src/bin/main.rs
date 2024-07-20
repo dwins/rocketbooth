@@ -4,10 +4,10 @@ use std::time::Duration;
 pub fn main() -> Result<(), Box<dyn std::error::Error>> {
     let sdl_context = sdl2::init()?;
     let video_subsystem = sdl_context.video()?;
+    let display_mode = video_subsystem.display_mode(0, 0)?;
 
     let window = video_subsystem
-        .window("rust-sdl2 demo", 800, 600)
-        .position_centered()
+        .window("rust-sdl2 demo", display_mode.w as _, display_mode.h as _)
         .fullscreen()
         .build()?;
 
