@@ -113,6 +113,7 @@ impl<'t, T> FrameTextureManager<'t, T> {
     pub fn new(
         path: &str,
         format: Option<Format>,
+        video_codec: Option<String>,
         options: Option<Dictionary>,
         texture_creator: &'t TextureCreator<T>,
     ) -> Result<Self, Box<dyn std::error::Error>> {
@@ -120,7 +121,7 @@ impl<'t, T> FrameTextureManager<'t, T> {
         let updater_and_texture = None;
         let (sender, receiver) = sync_channel::<Frame>(0);
         std::thread::spawn(move || {
-            Self::read_video_frames(&path, format, options, sender).ok();
+            Self::read_video_frames(&path, format, video_codec, options, sender).ok();
         });
         Ok(Self {
             frame: None,
@@ -152,6 +153,7 @@ impl<'t, T> FrameTextureManager<'t, T> {
     fn read_video_frames(
         src: &str,
         format: Option<Format>,
+        video_codec: Option<String>,
         options: Option<Dictionary>,
         sender: SyncSender<Frame>,
     ) -> Result<(), Box<dyn std::error::Error>> {
@@ -162,7 +164,7 @@ impl<'t, T> FrameTextureManager<'t, T> {
             .find(|stream| stream.is_video())
             .ok_or("No video stream")?;
         let mut decoder = video_stream
-            .create_decoder()
+            .create_decoder(video_codec.as_deref())
             .ok_or("Codec failed to initialize")?;
         let mut packet = Packet::new().ok_or("Could not allocate packet")?;
         'read: while context.read_into(&mut packet) {

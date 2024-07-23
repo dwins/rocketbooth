@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 pub struct VideoSource {
     pub path: String,
     pub format: Option<String>,
+    pub video_codec: Option<String>,
     #[serde(default)]
     pub options: HashMap<String, String>,
 }

@@ -77,7 +77,7 @@ fn read_video_frames(sender: SyncSender<Frame>) -> Result<(), Box<dyn std::error
         .find(|stream| stream.is_video())
         .ok_or("No video stream")?;
     let mut decoder = video_stream
-        .create_decoder()
+        .create_decoder(None)
         .ok_or("Codec failed to initialize")?;
     let mut packet = Packet::new().ok_or("Could not allocate packet")?;
     'read: while context.read_into(&mut packet) {

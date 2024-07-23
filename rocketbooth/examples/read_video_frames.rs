@@ -13,7 +13,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .find(|stream| stream.is_video())
         .ok_or("No video stream")?;
     let mut decoder = video_stream
-        .create_decoder()
+        .create_decoder(None)
         .ok_or("Codec failed to initialize")?;
     println!("Reading video stream #{}", video_stream.index());
     let mut packet = Packet::new().ok_or("Could not allocate packet")?;

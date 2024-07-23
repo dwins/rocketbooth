@@ -4,6 +4,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let config = Config {
         video_source: VideoSource {
             path: "/dev/video0".to_string(),
+            video_codec: None,
             format: None,
             options: Default::default(),
         },

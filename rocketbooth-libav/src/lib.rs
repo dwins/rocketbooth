@@ -9,12 +9,13 @@ use sys::{
     av_dict_free, av_dict_set, av_find_input_format, av_frame_alloc, av_frame_free,
     av_frame_get_buffer, av_free, av_get_padded_bits_per_pixel, av_malloc, av_packet_alloc,
     av_packet_free, av_packet_unref, av_pix_fmt_desc_get, av_read_frame, avcodec_alloc_context3,
-    avcodec_find_decoder, avcodec_free_context, avcodec_open2, avcodec_parameters_to_context,
-    avcodec_receive_frame, avcodec_send_packet, avdevice_register_all, avformat_find_stream_info,
-    avformat_open_input, sws_freeContext, sws_getContext, sws_scale, AVCodecContext, AVDictionary,
-    AVFormatContext, AVFrame, AVInputFormat, AVMediaType_AVMEDIA_TYPE_VIDEO, AVPacket,
-    AVPixelFormat, AVPixelFormat_AV_PIX_FMT_RGB24, AVPixelFormat_AV_PIX_FMT_YUV420P, AVStream,
-    SwsContext, AV_PIX_FMT_FLAG_RGB, SWS_FAST_BILINEAR,
+    avcodec_find_decoder, avcodec_find_decoder_by_name, avcodec_free_context, avcodec_open2,
+    avcodec_parameters_to_context, avcodec_receive_frame, avcodec_send_packet,
+    avdevice_register_all, avformat_find_stream_info, avformat_open_input, sws_freeContext,
+    sws_getContext, sws_scale, AVCodecContext, AVDictionary, AVFormatContext, AVFrame,
+    AVInputFormat, AVMediaType_AVMEDIA_TYPE_VIDEO, AVPacket, AVPixelFormat,
+    AVPixelFormat_AV_PIX_FMT_RGB24, AVPixelFormat_AV_PIX_FMT_YUV420P, AVStream, SwsContext,
+    AV_PIX_FMT_FLAG_RGB, SWS_FAST_BILINEAR,
 };
 
 mod sys;
@@ -305,9 +306,16 @@ impl Stream {
         codec_type == AVMediaType_AVMEDIA_TYPE_VIDEO
     }
 
-    pub fn create_decoder(&self) -> Option<Decoder> {
+    pub fn create_decoder(&self, name: Option<&str>) -> Option<Decoder> {
         let borrowed_codec = unsafe { (*self.0).codecpar };
-        let codec = unsafe { avcodec_find_decoder((*borrowed_codec).codec_id) };
+        let codec = if let Some(name) = name {
+            unsafe {
+                let name = CString::new(name).unwrap();
+                avcodec_find_decoder_by_name(name.as_ptr())
+            }
+        } else {
+            unsafe { avcodec_find_decoder((*borrowed_codec).codec_id) }
+        };
         if codec.is_null() {
             return None;
         }

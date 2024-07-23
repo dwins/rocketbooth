@@ -66,8 +66,9 @@ impl<'t, T> State<'t, T> {
                                     .config
                                     .video_source
                                     .format
-                                    .as_ref()
-                                    .and_then(|s| Format::from_name(s.as_str())),
+                                    .as_deref()
+                                    .and_then(Format::from_name),
+                                context.config.video_source.video_codec.clone(),
                                 Some(&context.config.video_source.options)
                                     .filter(|m| !m.is_empty())
                                     .map(Dictionary::from),
