@@ -1,6 +1,5 @@
 use std::time::{Duration, Instant};
 
-use rocketbooth_libav::{Dictionary, Format};
 use sdl2::{
     event::{Event, EventPollIterator},
     keyboard::Keycode,
@@ -61,17 +60,7 @@ impl<'t, T> State<'t, T> {
                         },
                         State::Welcome { .. } => State::Explainer {
                             frame_texture_manager: FrameTextureManager::new(
-                                &context.config.video_source.path,
-                                context
-                                    .config
-                                    .video_source
-                                    .format
-                                    .as_deref()
-                                    .and_then(Format::from_name),
-                                context.config.video_source.video_codec.clone(),
-                                Some(&context.config.video_source.options)
-                                    .filter(|m| !m.is_empty())
-                                    .map(Dictionary::from),
+                                &context.config.video_source,
                                 context.texture_creator,
                             )?,
                             deadline: now + Duration::from_secs(30),

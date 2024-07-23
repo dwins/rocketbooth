@@ -7,6 +7,7 @@ pub struct VideoSource {
     pub path: String,
     pub format: Option<String>,
     pub video_codec: Option<String>,
+    pub display_size: Option<(usize, usize)>,
     #[serde(default)]
     pub options: HashMap<String, String>,
 }

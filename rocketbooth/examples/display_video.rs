@@ -52,7 +52,7 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
         if let Ok(frame) = receiver.try_recv() {
             match texture.as_mut() {
                 Some((updater, texture)) => updater.update(&frame, texture)?,
-                None => texture = frame_to_texture(&frame, &texture_creator).ok(),
+                None => texture = frame_to_texture(&frame, None, &texture_creator).ok(),
             }
         }
         ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));

@@ -2,6 +2,7 @@
 path = "/dev/video0"
 format = "v4l2"
 video_codec = "h264_v4l2m2m"
+display_size = [960, 540]
 
 [video_source.options]
 # framerate = "10"

@@ -5,6 +5,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         video_source: VideoSource {
             path: "/dev/video0".to_string(),
             video_codec: None,
+            display_size: None,
             format: None,
             options: Default::default(),
         },
