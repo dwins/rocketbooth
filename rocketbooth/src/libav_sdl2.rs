@@ -1,6 +1,8 @@
-use std::sync::mpsc::{sync_channel, Receiver, SyncSender};
+use std::sync::{Arc, Mutex};
 
-use rocketbooth_libav::{Dictionary, Format, FormatContext, Frame, Packet, ReceiveResult, ScalingContext};
+use rocketbooth_libav::{
+    Dictionary, Format, FormatContext, Frame, Packet, ReceiveResult, ScalingContext,
+};
 use sdl2::{
     pixels::PixelFormatEnum,
     render::{Texture, TextureCreator},
@@ -104,7 +106,7 @@ impl FrameTextureUpdater {
 
 pub struct FrameTextureManager<'t, T> {
     frame: Option<Frame>,
-    receiver: Receiver<Frame>,
+    shared_frame: Arc<Mutex<Option<Frame>>>,
     texture_creator: &'t TextureCreator<T>,
     updater_and_texture: Option<(FrameTextureUpdater, Texture<'t>)>,
 }
@@ -119,13 +121,16 @@ impl<'t, T> FrameTextureManager<'t, T> {
     ) -> Result<Self, Box<dyn std::error::Error>> {
         let path = path.to_owned();
         let updater_and_texture = None;
-        let (sender, receiver) = sync_channel::<Frame>(0);
-        std::thread::spawn(move || {
-            Self::read_video_frames(&path, format, video_codec, options, sender).ok();
+        let shared_frame = Arc::new(Mutex::new(None));
+        std::thread::spawn({
+            let shared_frame = Arc::clone(&shared_frame);
+            move || {
+                Self::read_video_frames(&path, format, video_codec, options, shared_frame).ok();
+            }
         });
         Ok(Self {
             frame: None,
-            receiver,
+            shared_frame,
             texture_creator,
             updater_and_texture,
         })
@@ -136,7 +141,13 @@ impl<'t, T> FrameTextureManager<'t, T> {
     }
 
     pub fn texture_ref(&mut self) -> Option<&Texture<'t>> {
-        if let Ok(frame) = self.receiver.try_recv() {
+        if let Some(frame) = self
+            .shared_frame
+            .lock()
+            .as_mut()
+            .ok()
+            .and_then(|frame| frame.take())
+        {
             match self.updater_and_texture.as_mut() {
                 Some((updater, texture)) => updater.update(&frame, texture).ok()?,
                 None => {
@@ -155,7 +166,7 @@ impl<'t, T> FrameTextureManager<'t, T> {
         format: Option<Format>,
         video_codec: Option<String>,
         options: Option<Dictionary>,
-        sender: SyncSender<Frame>,
+        shared_frame: Arc<Mutex<Option<Frame>>>,
     ) -> Result<(), Box<dyn std::error::Error>> {
         let mut context = FormatContext::open(src, format, options).ok_or("Failed to open file")?;
         context.find_stream_info();
@@ -177,7 +188,7 @@ impl<'t, T> FrameTextureManager<'t, T> {
                         ReceiveResult::Done => break 'read,
                         ReceiveResult::Pending | ReceiveResult::Error => break 'receive,
                         ReceiveResult::Success => {
-                            sender.send(frame)?;
+                            *shared_frame.lock().unwrap() = Some(frame);
                             frame = Frame::new().ok_or("Failed to reinitialize frame")?;
                         }
                     }
