@@ -13,9 +13,8 @@ use sys::{
     avcodec_parameters_to_context, avcodec_receive_frame, avcodec_send_packet,
     avdevice_register_all, avformat_find_stream_info, avformat_open_input, sws_freeContext,
     sws_getContext, sws_scale, AVCodecContext, AVDictionary, AVFormatContext, AVFrame,
-    AVInputFormat, AVMediaType_AVMEDIA_TYPE_VIDEO, AVPacket, AVPixelFormat,
-    AVPixelFormat_AV_PIX_FMT_RGB24, AVPixelFormat_AV_PIX_FMT_YUV420P, AVStream, SwsContext,
-    AV_PIX_FMT_FLAG_RGB, SWS_FAST_BILINEAR,
+    AVInputFormat, AVMediaType, AVPacket, AVPixelFormat, AVStream, SwsContext, AV_PIX_FMT_FLAG_RGB,
+    SWS_FAST_BILINEAR,
 };
 
 mod sys;
@@ -191,7 +190,7 @@ impl Frame {
         unsafe {
             (*ptr).width = width;
             (*ptr).height = height;
-            (*ptr).format = format;
+            (*ptr).format = format.0;
         }
         if unsafe { av_frame_get_buffer(ptr, 0) } != 0 {
             return None;
@@ -200,11 +199,11 @@ impl Frame {
     }
 
     pub fn alloc_rgb24(width: i32, height: i32) -> Option<Self> {
-        Self::alloc(width, height, AVPixelFormat_AV_PIX_FMT_RGB24)
+        Self::alloc(width, height, AVPixelFormat::AV_PIX_FMT_RGB24)
     }
 
     pub fn alloc_yuv420p(width: i32, height: i32) -> Option<Self> {
-        Self::alloc(width, height, AVPixelFormat_AV_PIX_FMT_YUV420P)
+        Self::alloc(width, height, AVPixelFormat::AV_PIX_FMT_YUV420P)
     }
 
     pub fn id(&self) -> i64 {
@@ -212,11 +211,11 @@ impl Frame {
     }
 
     pub fn is_yuv420p(&self) -> bool {
-        self.format() == AVPixelFormat_AV_PIX_FMT_YUV420P
+        self.format() == AVPixelFormat::AV_PIX_FMT_YUV420P
     }
 
     pub fn is_rgb24(&self) -> bool {
-        self.format() == AVPixelFormat_AV_PIX_FMT_RGB24
+        self.format() == AVPixelFormat::AV_PIX_FMT_RGB24
     }
 
     pub fn is_any_rgb_format(&self) -> bool {
@@ -224,8 +223,8 @@ impl Frame {
         pix_desc.flags & AV_PIX_FMT_FLAG_RGB as u64 != 0
     }
 
-    pub fn format(&self) -> i32 {
-        unsafe { *self.0 }.format
+    pub fn format(&self) -> AVPixelFormat {
+        AVPixelFormat(unsafe { *self.0 }.format)
     }
 
     pub fn format_name(&self) -> String {
@@ -303,7 +302,7 @@ impl Stream {
 
     pub fn is_video(&self) -> bool {
         let codec_type = unsafe { (*(*self.0).codecpar).codec_type };
-        codec_type == AVMediaType_AVMEDIA_TYPE_VIDEO
+        codec_type == AVMediaType::AVMEDIA_TYPE_VIDEO
     }
 
     pub fn create_decoder(&self, name: Option<&str>) -> Option<Decoder> {
@@ -375,10 +374,10 @@ impl ScalingContext {
     pub fn new(
         src_width: i32,
         src_height: i32,
-        src_format: i32,
+        src_format: AVPixelFormat,
         dst_width: i32,
         dst_height: i32,
-        dst_format: i32,
+        dst_format: AVPixelFormat,
     ) -> Self {
         let context = unsafe {
             sws_getContext(

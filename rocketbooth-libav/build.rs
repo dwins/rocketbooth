@@ -13,6 +13,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .blocklist_var("FP_NAN")
         .blocklist_var("FP_NORMAL")
         .blocklist_var("FP_SUBNORMAL")
+        .newtype_enum("AVMediaType")
+        .newtype_enum("AVPixelFormat")
         .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()))
         .generate()?;
     let out_path = PathBuf::from(env::var("OUT_DIR")?);
