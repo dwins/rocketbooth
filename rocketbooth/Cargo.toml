@@ -4,7 +4,10 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-image = "0.25.1"
+image = { version = "0.25.1", default-features = false, features = [
+    "jpeg",
+    "png",
+] }
 rocketbooth-libav = { version = "0.1.0", path = "../rocketbooth-libav" }
 sdl2 = { version = "0.37.0", features = ["use-bindgen"] }
 serde = { version = "1.0.204", features = ["derive"] }
