@@ -1,4 +1,4 @@
-use rocketbooth::{Config, ImageSettings, PrintSettings, VideoSource};
+use rocketbooth::{Config, ImageLayout, ImageSettings, PrintSettings, VideoSource};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let config = Config {
@@ -12,6 +12,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         image: Some(ImageSettings {
             prefix: None,
             format: None,
+            layout: ImageLayout::default(),
         }),
         print: Some(PrintSettings { enabled: true }),
     };

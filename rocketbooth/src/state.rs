@@ -1,16 +1,18 @@
 use std::time::{Duration, Instant};
 
+use image::RgbImage;
 use sdl2::{
     event::{Event, EventPollIterator},
     keyboard::Keycode,
     mouse::MouseButton,
     pixels::Color,
+    rect::Rect,
     render::{Canvas, RenderTarget, Texture, TextureCreator},
 };
 
 use crate::{
-    image_libav::frame_to_image, image_sdl2::image_to_texture, libav_sdl2::FrameTextureManager,
-    Config,
+    config::ImageLayout, image_libav::frame_to_image, image_sdl2::image_to_texture,
+    libav_sdl2::FrameTextureManager, Config,
 };
 
 pub enum State<'t, T> {
@@ -23,10 +25,14 @@ pub enum State<'t, T> {
         deadline: Instant,
     },
     Capture {
+        captured_textures: Vec<Texture<'t>>,
+        captured_images: Vec<RgbImage>,
         frame_texture_manager: FrameTextureManager<'t, T>,
         deadline: Instant,
     },
-    Debrief,
+    Debrief {
+        captured_textures: Vec<Texture<'t>>,
+    },
 }
 
 impl<'t, T> Default for State<'t, T> {
@@ -71,9 +77,11 @@ impl<'t, T> State<'t, T> {
                         } => State::Capture {
                             frame_texture_manager,
                             deadline: now + Duration::from_secs(3),
+                            captured_images: vec![],
+                            captured_textures: vec![],
                         },
                         x @ State::Capture { .. } => x,
-                        State::Debrief => State::Welcome {
+                        State::Debrief { .. } => State::Welcome {
                             deadline: Instant::now() + Duration::from_secs(3),
                         },
                     })
@@ -88,24 +96,70 @@ impl<'t, T> State<'t, T> {
             }
             State::Capture {
                 deadline,
-                frame_texture_manager,
+                mut frame_texture_manager,
+                mut captured_images,
+                mut captured_textures,
             } if deadline < now => {
-                if let Some(frame) = frame_texture_manager.frame_ref() {
-                    let img = frame_to_image(frame)?;
-                    let prefix = context
+                let image = {
+                    let frame = frame_texture_manager
+                        .frame_ref()
+                        .ok_or("Trying to capture before device is ready")?;
+                    frame_to_image(frame)?
+                };
+                let texture = {
+                    let texture = frame_texture_manager
+                        .texture_mut()
+                        .ok_or("Texture not ready yet")?;
+                    let query = texture.query();
+                    let mut new_texture = context.texture_creator.create_texture_static(
+                        query.format,
+                        query.width,
+                        query.height,
+                    )?;
+                    std::mem::swap(texture, &mut new_texture);
+                    new_texture
+                };
+                captured_images.push(image);
+                captured_textures.push(texture);
+
+                if captured_images.len()
+                    < (context.config.image.as_ref())
+                        .map_or(ImageLayout::default(), |cfg| cfg.layout)
+                        .capture_count()
+                {
+                    State::Capture {
+                        deadline: deadline + Duration::from_secs(3),
+                        frame_texture_manager,
+                        captured_images,
+                        captured_textures,
+                    }
+                } else {
+                    let layout = context
                         .config
                         .image
                         .as_ref()
+                        .map_or(ImageLayout::default(), |settings| settings.layout);
+                    let (width, height) =
+                        layout.dest_size(captured_images[0].width(), captured_images[0].height());
+                    let mut final_image = RgbImage::new(width, height);
+                    for (rect, partial_image) in Iterator::zip(
+                        layout.arrange_within_rect(width, height).iter(),
+                        captured_images.iter(),
+                    ) {
+                        image::imageops::overlay(
+                            &mut final_image,
+                            partial_image,
+                            rect.0 as i64,
+                            rect.1 as i64,
+                        );
+                    }
+
+                    let prefix = (context.config.image.as_ref())
                         .and_then(|img| img.prefix.as_ref())
-                        .map(|s| s.as_str())
-                        .unwrap_or("");
-                    let format = context
-                        .config
-                        .image
-                        .as_ref()
-                        .and_then(|img| img.format.as_ref())
-                        .map(|s| s.as_str())
-                        .unwrap_or("");
+                        .map_or("", |s| s.as_str());
+                    let format = (context.config.image.as_ref())
+                        .and_then(|cfg| cfg.format.as_ref())
+                        .map_or("", |s| s.as_str());
                     let format = if format == "PNG" {
                         image::ImageFormat::Png
                     } else {
@@ -114,11 +168,11 @@ impl<'t, T> State<'t, T> {
                     let suffix = if format == image::ImageFormat::Png {
                         "png"
                     } else {
-                        "jpg"
+                        "jpeg"
                     };
-                    img.save_with_format(format!("{prefix}img.{suffix}"), format)?;
+                    final_image.save_with_format(format!("{prefix}img.{suffix}"), format)?;
+                    State::Debrief { captured_textures }
                 }
-                State::Debrief
             }
             _ => self,
         })
@@ -156,17 +210,37 @@ impl<'t, T> State<'t, T> {
             }
             State::Capture {
                 frame_texture_manager,
+                captured_textures,
                 ..
             } => {
+                let layout = (context.config.image.as_ref())
+                    .map_or(ImageLayout::default(), |cfg| cfg.layout);
+                let (width, height) = canvas.output_size()?;
+                let texture_iter = Iterator::chain(
+                    captured_textures.iter(),
+                    frame_texture_manager.texture_ref(),
+                );
                 canvas.clear();
-                if let Some(texture) = frame_texture_manager.texture_ref() {
-                    canvas.copy(texture, None, None)?;
+
+                for (&(x, y, w, h), tex) in Iterator::zip(
+                    layout.arrange_within_rect(width, height).iter(),
+                    texture_iter,
+                ) {
+                    canvas.copy(tex, None, Some(Rect::new(x as i32, y as i32, w, h)))?;
                 }
-                canvas.copy(&context.prompt03, None, None)?;
                 canvas.present();
             }
-            State::Debrief => {
+            State::Debrief { captured_textures } => {
+                let layout = (context.config.image.as_ref())
+                    .map_or(ImageLayout::default(), |cfg| cfg.layout);
+                let (width, height) = canvas.output_size()?;
                 canvas.clear();
+                for (&(x, y, w, h), tex) in Iterator::zip(
+                    layout.arrange_within_rect(width, height).iter(),
+                    captured_textures.iter(),
+                ) {
+                    canvas.copy(tex, None, Some(Rect::new(x as i32, y as i32, w, h)))?;
+                }
                 canvas.copy(&context.prompt04, None, None)?;
                 canvas.present();
             }

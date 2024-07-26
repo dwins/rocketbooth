@@ -187,6 +187,12 @@ impl<'t, T> FrameTextureManager<'t, T> {
             .map(|(_, texture)| texture)
     }
 
+    pub fn texture_mut(&mut self) -> Option<&mut Texture<'t>> {
+        self.updater_and_texture
+            .as_mut()
+            .map(|(_, texture)| texture)
+    }
+
     fn read_video_frames(
         src: &str,
         format: Option<Format>,

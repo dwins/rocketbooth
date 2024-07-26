@@ -19,7 +19,7 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
         .fullscreen()
         .build()?;
 
-    let mut canvas = window.into_canvas().build()?;
+    let mut canvas = window.into_canvas().accelerated().present_vsync().build()?;
 
     let texture_creator = canvas.texture_creator();
     let mut context = Context::new(config, &texture_creator)?;
