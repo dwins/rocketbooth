@@ -2,5 +2,4 @@
 
 resolver = "2"
 
-members = ["rocketbooth"
-, "rocketbooth-libav"]
+members = ["rocketbooth", "rocketbooth-libav"]

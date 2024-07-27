@@ -142,15 +142,15 @@ impl<'t, T> State<'t, T> {
                     let (width, height) =
                         layout.dest_size(captured_images[0].width(), captured_images[0].height());
                     let mut final_image = RgbImage::new(width, height);
-                    for (rect, partial_image) in Iterator::zip(
+                    for (&(x, y, _, _), partial_image) in Iterator::zip(
                         layout.arrange_within_rect(width, height).iter(),
                         captured_images.iter(),
                     ) {
                         image::imageops::overlay(
                             &mut final_image,
                             partial_image,
-                            rect.0 as i64,
-                            rect.1 as i64,
+                            x as i64,
+                            y as i64,
                         );
                     }
 
