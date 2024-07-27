@@ -9,11 +9,16 @@ use sdl2::{
     rect::Rect,
     render::{Canvas, RenderTarget, Texture, TextureCreator},
 };
+use time::format_description::BorrowedFormatItem;
+use time::macros::format_description;
+use time::OffsetDateTime;
 
 use crate::{
     config::ImageLayout, image_libav::frame_to_image, image_sdl2::image_to_texture,
     libav_sdl2::FrameTextureManager, Config,
 };
+
+const FILE_TIMESTAMP_FORMAT: &[BorrowedFormatItem] = format_description!("%Y-%m-%d_%H:%M:%S");
 
 pub enum State<'t, T> {
     Waiting,
@@ -175,7 +180,11 @@ impl<'t, T> State<'t, T> {
                     } else {
                         "jpeg"
                     };
-                    final_image.save_with_format(format!("{prefix}img.{suffix}"), format)?;
+                    let timestamp = OffsetDateTime::now_local()
+                        .unwrap_or_else(|_| OffsetDateTime::now_utc())
+                        .format(FILE_TIMESTAMP_FORMAT)?;
+                    final_image
+                        .save_with_format(format!("{prefix}img_{timestamp}.{suffix}"), format)?;
                     State::Debrief {
                         captured_textures,
                         deadline: deadline + Duration::from_secs(5),

@@ -11,4 +11,9 @@ image = { version = "0.25.1", default-features = false, features = [
 rocketbooth-libav = { version = "0.1.0", path = "../rocketbooth-libav" }
 sdl2 = { version = "0.37.0", features = ["use-bindgen"] }
 serde = { version = "1.0.204", features = ["derive"] }
+time = { version = "0.3.36", features = [
+    "formatting",
+    "local-offset",
+    "macros",
+] }
 toml = { version = "0.8.15", features = ["display"] }
