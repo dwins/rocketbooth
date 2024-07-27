@@ -56,7 +56,11 @@ impl<'t, T> State<'t, T> {
                     keycode: Some(Keycode::Escape | Keycode::Q),
                     ..
                 } => return Result::Err("Shutdown".into()),
-                Event::MouseButtonDown {
+                Event::KeyDown {
+                    keycode: Some(Keycode::Return | Keycode::Space),
+                    ..
+                }
+                | Event::MouseButtonDown {
                     mouse_btn: MouseButton::Left,
                     ..
                 } => {
