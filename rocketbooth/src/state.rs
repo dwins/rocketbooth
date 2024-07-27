@@ -32,6 +32,7 @@ pub enum State<'t, T> {
     },
     Debrief {
         captured_textures: Vec<Texture<'t>>,
+        deadline: Instant,
     },
 }
 
@@ -175,9 +176,15 @@ impl<'t, T> State<'t, T> {
                         "jpeg"
                     };
                     final_image.save_with_format(format!("{prefix}img.{suffix}"), format)?;
-                    State::Debrief { captured_textures }
+                    State::Debrief {
+                        captured_textures,
+                        deadline: deadline + Duration::from_secs(5),
+                    }
                 }
             }
+            State::Debrief { deadline, .. } if deadline < now => State::Welcome {
+                deadline: deadline + Duration::from_secs(3),
+            },
             _ => self,
         })
     }
@@ -234,7 +241,9 @@ impl<'t, T> State<'t, T> {
                 }
                 canvas.present();
             }
-            State::Debrief { captured_textures } => {
+            State::Debrief {
+                captured_textures, ..
+            } => {
                 let layout = (context.config.image.as_ref())
                     .map_or(ImageLayout::default(), |cfg| cfg.layout);
                 let (width, height) = canvas.output_size()?;

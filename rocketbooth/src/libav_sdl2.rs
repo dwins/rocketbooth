@@ -230,3 +230,9 @@ impl<'t, T> FrameTextureManager<'t, T> {
         Ok(())
     }
 }
+
+impl<'t, T> Drop for FrameTextureManager<'t, T> {
+    fn drop(&mut self) {
+        (*self.shared_frame.lock().unwrap()) = None
+    }
+}
