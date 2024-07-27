@@ -1,4 +1,7 @@
-use std::sync::{Arc, Mutex};
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc, Mutex,
+};
 
 use rocketbooth_libav::{
     Dictionary, Format, FormatContext, Frame, Packet, ReceiveResult, ScalingContext,
@@ -117,6 +120,7 @@ impl FrameTextureUpdater {
 pub struct FrameTextureManager<'t, T> {
     frame: Option<Frame>,
     shared_frame: Arc<Mutex<Option<Frame>>>,
+    control_bit: Arc<AtomicBool>,
     texture_creator: &'t TextureCreator<T>,
     updater_and_texture: Option<(FrameTextureUpdater, Texture<'t>)>,
     display_size: Option<(usize, usize)>,
@@ -138,8 +142,10 @@ impl<'t, T> FrameTextureManager<'t, T> {
         };
         let updater_and_texture = None;
         let shared_frame = Arc::new(Mutex::new(None));
+        let control_bit = Arc::new(AtomicBool::new(true));
         std::thread::spawn({
             let shared_frame = Arc::clone(&shared_frame);
+            let control_bit = Arc::clone(&control_bit);
             move || {
                 if let Err(e) = Self::read_video_frames(
                     path.as_str(),
@@ -147,12 +153,14 @@ impl<'t, T> FrameTextureManager<'t, T> {
                     video_codec,
                     options,
                     shared_frame,
+                    control_bit,
                 ) {
                     println!("{e:?}");
                 }
             }
         });
         Ok(Self {
+            control_bit,
             frame: None,
             shared_frame,
             texture_creator,
@@ -199,6 +207,7 @@ impl<'t, T> FrameTextureManager<'t, T> {
         video_codec: Option<String>,
         options: Option<Dictionary>,
         shared_frame: Arc<Mutex<Option<Frame>>>,
+        control_bit: Arc<AtomicBool>,
     ) -> Result<(), Box<dyn std::error::Error>> {
         let mut context = FormatContext::open(src, format, options).ok_or("Failed to open file")?;
         context.find_stream_info();
@@ -210,7 +219,7 @@ impl<'t, T> FrameTextureManager<'t, T> {
             .create_decoder(video_codec.as_deref())
             .ok_or("Codec failed to initialize")?;
         let mut packet = Packet::new().ok_or("Could not allocate packet")?;
-        'read: while context.read_into(&mut packet) {
+        'read: while control_bit.load(Ordering::Relaxed) && context.read_into(&mut packet) {
             if packet.stream_index() == video_stream.index() {
                 decoder.send(&mut packet);
                 let mut frame = Frame::new().ok_or("Failed to initialize frame")?;
@@ -233,6 +242,6 @@ impl<'t, T> FrameTextureManager<'t, T> {
 
 impl<'t, T> Drop for FrameTextureManager<'t, T> {
     fn drop(&mut self) {
-        (*self.shared_frame.lock().unwrap()) = None
+        self.control_bit.store(false, Ordering::Relaxed)
     }
 }
