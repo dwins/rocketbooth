@@ -1,4 +1,4 @@
-use rocketbooth::{Config, ImageLayout, ImageSettings, PrintSettings, VideoSource};
+use rocketbooth::{Config, ImageLayout, ImageSettings, VideoSource};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let config = Config {
@@ -13,8 +13,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             prefix: None,
             format: None,
             layout: ImageLayout::default(),
+            enable_post_command: true,
+            post_command: Some(vec!["echo".into(), "hi".into()]),
         }),
-        print: Some(PrintSettings { enabled: true }),
     };
     let serialized = &toml::to_string(&config)?;
     println!("{serialized}");

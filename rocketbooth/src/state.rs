@@ -1,4 +1,8 @@
-use std::time::{Duration, Instant};
+use std::{
+    path::PathBuf,
+    process::Command,
+    time::{Duration, Instant},
+};
 
 use image::RgbImage;
 use sdl2::{
@@ -183,8 +187,21 @@ impl<'t, T> State<'t, T> {
                     let timestamp = OffsetDateTime::now_local()
                         .unwrap_or_else(|_| OffsetDateTime::now_utc())
                         .format(FILE_TIMESTAMP_FORMAT)?;
-                    final_image
-                        .save_with_format(format!("{prefix}img_{timestamp}.{suffix}"), format)?;
+                    let saved_path: PathBuf = format!("{prefix}img_{timestamp}.{suffix}").into();
+                    final_image.save_with_format(&saved_path, format)?;
+                    let post_command = context.config.image.as_ref().and_then(|cfg| {
+                        if cfg.enable_post_command {
+                            cfg.post_command.as_ref().filter(|v| !v.is_empty()).cloned()
+                        } else {
+                            None
+                        }
+                    });
+                    if let Some(post_command) = post_command {
+                        let _ = Command::new(&post_command[0])
+                            .args(&post_command[1..])
+                            .arg(saved_path)
+                            .spawn();
+                    }
                     State::Debrief {
                         captured_textures,
                         deadline: deadline + Duration::from_secs(5),

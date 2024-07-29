@@ -16,24 +16,24 @@ pub struct VideoSource {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct PrintSettings {
-    #[serde(default)]
-    pub enabled: bool,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
 pub struct ImageSettings {
     #[serde(default)]
     pub layout: ImageLayout,
     pub prefix: Option<String>,
     pub format: Option<String>,
+    pub post_command: Option<Vec<String>>,
+    #[serde(default="default_post_command")]
+    pub enable_post_command: bool,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Config {
     pub video_source: VideoSource,
     pub image: Option<ImageSettings>,
-    pub print: Option<PrintSettings>,
+}
+
+fn default_post_command() -> bool {
+    true
 }
 
 #[derive(Serialize, Deserialize, Copy, Clone, Debug, Default)]

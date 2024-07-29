@@ -12,6 +12,5 @@ input_format = "h264"
 [image]
 layout = "two_by_two"
 prefix = "pb_"
-
-[print]
-enable = false
+enable_post_command = false
+post_command = ["lpr"]
