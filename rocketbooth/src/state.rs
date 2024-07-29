@@ -1,6 +1,7 @@
 use std::{
     path::PathBuf,
     process::Command,
+    thread::JoinHandle,
     time::{Duration, Instant},
 };
 
@@ -43,6 +44,7 @@ pub enum State<'t, T> {
     Debrief {
         captured_textures: Vec<Texture<'t>>,
         deadline: Instant,
+        image_saving_handle: JoinHandle<()>,
     },
 }
 
@@ -184,7 +186,7 @@ impl<'t, T> State<'t, T> {
                         .unwrap_or_else(|_| OffsetDateTime::now_utc())
                         .format(FILE_TIMESTAMP_FORMAT)?;
                     let saved_path: PathBuf = format!("{prefix}img_{timestamp}.{suffix}").into();
-                    std::thread::spawn(move || {
+                    let image_saving_handle = std::thread::spawn(move || {
                         let mut final_image = RgbImage::new(width, height);
                         for (&(x, y, _, _), partial_image) in Iterator::zip(
                             layout.arrange_within_rect(width, height).iter(),
@@ -209,10 +211,15 @@ impl<'t, T> State<'t, T> {
                     State::Debrief {
                         captured_textures,
                         deadline: deadline + Duration::from_secs(5),
+                        image_saving_handle,
                     }
                 }
             }
-            State::Debrief { deadline, .. } if deadline < now => State::Welcome {
+            State::Debrief {
+                deadline,
+                image_saving_handle,
+                ..
+            } if deadline < now && image_saving_handle.is_finished() => State::Welcome {
                 deadline: deadline + Duration::from_secs(3),
             },
             _ => self,
