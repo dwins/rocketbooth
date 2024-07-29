@@ -22,7 +22,7 @@ use crate::{
     libav_sdl2::FrameTextureManager, Config,
 };
 
-const FILE_TIMESTAMP_FORMAT: &[BorrowedFormatItem] = format_description!("%Y-%m-%d_%H:%M:%S");
+const FILE_TIMESTAMP_FORMAT: &[BorrowedFormatItem] = format_description!("[year]-[month]-[day]_[hour]:[minute]:[second]");
 
 pub enum State<'t, T> {
     Waiting,
@@ -248,8 +248,17 @@ impl<'t, T> State<'t, T> {
             State::Capture {
                 frame_texture_manager,
                 captured_textures,
+                deadline,
                 ..
             } => {
+                let t = *deadline - Instant::now();
+                let countdown_overlay = match t.as_secs() {
+                    0 => Some(&context.prompt06),
+                    1 => Some(&context.prompt05),
+                    2 => Some(&context.prompt04),
+                    3 => Some(&context.prompt03),
+                    _ => None,
+                };
                 let layout = (context.config.image.as_ref())
                     .map_or(ImageLayout::default(), |cfg| cfg.layout);
                 let (width, height) = canvas.output_size()?;
@@ -259,11 +268,17 @@ impl<'t, T> State<'t, T> {
                 );
                 canvas.clear();
 
-                for (&(x, y, w, h), tex) in Iterator::zip(
-                    layout.arrange_within_rect(width, height).iter(),
-                    texture_iter,
-                ) {
+                let rects = layout.arrange_within_rect(width, height);
+                for (&(x, y, w, h), tex) in Iterator::zip(rects.iter(), texture_iter) {
                     canvas.copy(tex, None, Some(Rect::new(x as i32, y as i32, w, h)))?;
+                }
+                if let Some(overlay) = countdown_overlay {
+                    let rect = rects
+                        .get(captured_textures.len())
+                        .map(|&(x, y, w, h)| Rect::new(x as i32, y as i32, w, h));
+                    if rect.is_some() {
+                        canvas.copy(overlay, None, rect)?;
+                    }
                 }
                 canvas.present();
             }
@@ -280,7 +295,7 @@ impl<'t, T> State<'t, T> {
                 ) {
                     canvas.copy(tex, None, Some(Rect::new(x as i32, y as i32, w, h)))?;
                 }
-                canvas.copy(&context.prompt04, None, None)?;
+                canvas.copy(&context.prompt07, None, None)?;
                 canvas.present();
             }
         }
@@ -295,6 +310,9 @@ pub struct Context<'t, T> {
     prompt02: Texture<'t>,
     prompt03: Texture<'t>,
     prompt04: Texture<'t>,
+    prompt05: Texture<'t>,
+    prompt06: Texture<'t>,
+    prompt07: Texture<'t>,
 }
 
 impl<'t, T> Context<'t, T> {
@@ -306,6 +324,9 @@ impl<'t, T> Context<'t, T> {
         let prompt02 = image_to_texture("./prompts/prompts.002.png", texture_creator)?;
         let prompt03 = image_to_texture("./prompts/prompts.003.png", texture_creator)?;
         let prompt04 = image_to_texture("./prompts/prompts.004.png", texture_creator)?;
+        let prompt05 = image_to_texture("./prompts/prompts.005.png", texture_creator)?;
+        let prompt06 = image_to_texture("./prompts/prompts.006.png", texture_creator)?;
+        let prompt07 = image_to_texture("./prompts/prompts.007.png", texture_creator)?;
         Ok(Self {
             config,
             texture_creator,
@@ -313,6 +334,9 @@ impl<'t, T> Context<'t, T> {
             prompt02,
             prompt03,
             prompt04,
+            prompt05,
+            prompt06,
+            prompt07,
         })
     }
 }
