@@ -22,7 +22,8 @@ use crate::{
     libav_sdl2::FrameTextureManager, Config,
 };
 
-const FILE_TIMESTAMP_FORMAT: &[BorrowedFormatItem] = format_description!("[year]-[month]-[day]_[hour]:[minute]:[second]");
+const FILE_TIMESTAMP_FORMAT: &[BorrowedFormatItem] =
+    format_description!("[year]-[month]-[day]_[hour]:[minute]:[second]");
 
 pub enum State<'t, T> {
     Waiting,
@@ -148,6 +149,13 @@ impl<'t, T> State<'t, T> {
                         captured_textures,
                     }
                 } else {
+                    let post_command = context.config.image.as_ref().and_then(|cfg| {
+                        if cfg.enable_post_command {
+                            cfg.post_command.as_ref().filter(|v| !v.is_empty()).cloned()
+                        } else {
+                            None
+                        }
+                    });
                     let layout = context
                         .config
                         .image
@@ -155,18 +163,6 @@ impl<'t, T> State<'t, T> {
                         .map_or(ImageLayout::default(), |settings| settings.layout);
                     let (width, height) =
                         layout.dest_size(captured_images[0].width(), captured_images[0].height());
-                    let mut final_image = RgbImage::new(width, height);
-                    for (&(x, y, _, _), partial_image) in Iterator::zip(
-                        layout.arrange_within_rect(width, height).iter(),
-                        captured_images.iter(),
-                    ) {
-                        image::imageops::overlay(
-                            &mut final_image,
-                            partial_image,
-                            x as i64,
-                            y as i64,
-                        );
-                    }
 
                     let prefix = (context.config.image.as_ref())
                         .and_then(|img| img.prefix.as_ref())
@@ -188,20 +184,28 @@ impl<'t, T> State<'t, T> {
                         .unwrap_or_else(|_| OffsetDateTime::now_utc())
                         .format(FILE_TIMESTAMP_FORMAT)?;
                     let saved_path: PathBuf = format!("{prefix}img_{timestamp}.{suffix}").into();
-                    final_image.save_with_format(&saved_path, format)?;
-                    let post_command = context.config.image.as_ref().and_then(|cfg| {
-                        if cfg.enable_post_command {
-                            cfg.post_command.as_ref().filter(|v| !v.is_empty()).cloned()
-                        } else {
-                            None
+                    std::thread::spawn(move || {
+                        let mut final_image = RgbImage::new(width, height);
+                        for (&(x, y, _, _), partial_image) in Iterator::zip(
+                            layout.arrange_within_rect(width, height).iter(),
+                            captured_images.iter(),
+                        ) {
+                            image::imageops::overlay(
+                                &mut final_image,
+                                partial_image,
+                                x as i64,
+                                y as i64,
+                            );
+                        }
+                        final_image.save_with_format(&saved_path, format).unwrap();
+                        if let Some(post_command) = post_command {
+                            let _ = Command::new(&post_command[0])
+                                .args(&post_command[1..])
+                                .arg(saved_path)
+                                .output()
+                                .unwrap();
                         }
                     });
-                    if let Some(post_command) = post_command {
-                        let _ = Command::new(&post_command[0])
-                            .args(&post_command[1..])
-                            .arg(saved_path)
-                            .spawn();
-                    }
                     State::Debrief {
                         captured_textures,
                         deadline: deadline + Duration::from_secs(5),
