@@ -76,7 +76,8 @@ impl<'t, T> State<'t, T> {
                 | Event::MouseButtonDown {
                     mouse_btn: MouseButton::Left,
                     ..
-                } => {
+                }
+                | Event::User { .. } => {
                     return Ok(match self {
                         State::Waiting => State::Welcome {
                             deadline: now + Duration::from_secs(30),

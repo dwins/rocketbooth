@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+gpiochip = { version = "0.1.1", optional = true }
 image = { version = "0.25.1", default-features = false, features = [
     "jpeg",
     "png",
@@ -17,3 +18,6 @@ time = { version = "0.3.36", features = [
     "macros",
 ] }
 toml = { version = "0.8.15", features = ["display"] }
+
+[features]
+gpio = ["dep:gpiochip"]
