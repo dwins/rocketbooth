@@ -11,10 +11,10 @@ use sys::{
     av_packet_free, av_packet_unref, av_pix_fmt_desc_get, av_read_frame, avcodec_alloc_context3,
     avcodec_find_decoder, avcodec_find_decoder_by_name, avcodec_free_context, avcodec_open2,
     avcodec_parameters_to_context, avcodec_receive_frame, avcodec_send_packet,
-    avdevice_register_all, avformat_find_stream_info, avformat_open_input, sws_freeContext,
-    sws_getContext, sws_scale, AVCodecContext, AVDictionary, AVFormatContext, AVFrame,
-    AVInputFormat, AVMediaType, AVPacket, AVPixelFormat, AVStream, SwsContext, AV_PIX_FMT_FLAG_RGB,
-    SWS_FAST_BILINEAR,
+    avdevice_register_all, avformat_close_input, avformat_find_stream_info, avformat_open_input,
+    sws_freeContext, sws_getContext, sws_scale, AVCodecContext, AVDictionary, AVFormatContext,
+    AVFrame, AVInputFormat, AVMediaType, AVPacket, AVPixelFormat, AVStream, SwsContext,
+    AV_PIX_FMT_FLAG_RGB, SWS_FAST_BILINEAR,
 };
 
 mod sys;
@@ -168,6 +168,14 @@ impl FormatContext {
 
     pub fn read_into(&mut self, packet: &mut Packet) -> bool {
         0 == unsafe { av_read_frame(self.0, packet.0) }
+    }
+}
+
+impl Drop for FormatContext {
+    fn drop(&mut self) {
+        unsafe {
+            avformat_close_input(&mut self.0);
+        }
     }
 }
 
