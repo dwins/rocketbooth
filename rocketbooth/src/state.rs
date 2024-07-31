@@ -79,7 +79,7 @@ impl<'t, T> State<'t, T> {
                 } => {
                     return Ok(match self {
                         State::Waiting => State::Welcome {
-                            deadline: now + Duration::from_secs(3),
+                            deadline: now + Duration::from_secs(30),
                         },
                         State::Welcome { .. } => State::Explainer {
                             frame_texture_manager: FrameTextureManager::new(
@@ -93,13 +93,13 @@ impl<'t, T> State<'t, T> {
                             ..
                         } => State::Capture {
                             frame_texture_manager,
-                            deadline: now + Duration::from_secs(3),
+                            deadline: now + Duration::from_secs(4),
                             captured_images: vec![],
                             captured_textures: vec![],
                         },
                         x @ State::Capture { .. } => x,
                         State::Debrief { .. } => State::Welcome {
-                            deadline: Instant::now() + Duration::from_secs(3),
+                            deadline: Instant::now() + Duration::from_secs(5),
                         },
                     })
                 }
@@ -145,7 +145,7 @@ impl<'t, T> State<'t, T> {
                         .capture_count()
                 {
                     State::Capture {
-                        deadline: deadline + Duration::from_secs(3),
+                        deadline: deadline + Duration::from_secs(4),
                         frame_texture_manager,
                         captured_images,
                         captured_textures,
@@ -251,7 +251,7 @@ impl<'t, T> State<'t, T> {
             } => {
                 canvas.clear();
                 if let Some(texture) = frame_texture_manager.texture_ref() {
-                    canvas.copy(texture, None, None)?;
+                    canvas.copy_ex(texture, None, None, 0f64, None, true, false)?;
                 }
                 canvas.copy(&context.prompt02, None, None)?;
                 canvas.present();
@@ -273,15 +273,21 @@ impl<'t, T> State<'t, T> {
                 let layout = (context.config.image.as_ref())
                     .map_or(ImageLayout::default(), |cfg| cfg.layout);
                 let (width, height) = canvas.output_size()?;
-                let texture_iter = Iterator::chain(
-                    captured_textures.iter(),
-                    frame_texture_manager.texture_ref(),
-                );
                 canvas.clear();
 
                 let rects = layout.arrange_within_rect(width, height);
-                for (&(x, y, w, h), tex) in Iterator::zip(rects.iter(), texture_iter) {
-                    canvas.copy(tex, None, Some(Rect::new(x as i32, y as i32, w, h)))?;
+                for (&(x, y, w, h), tex) in Iterator::zip(rects.iter(), captured_textures.iter()) {
+                    let rect = Some(Rect::new(x as i32, y as i32, w, h));
+                    canvas.copy_ex(tex, None, rect, 0f64, None, true, false)?;
+                }
+                if let Some(&(x, y, w, h)) = rects.get(captured_textures.len()) {
+                    let rect = Some(Rect::new(x as i32, y as i32, w, h));
+                    if let Some(tex) = frame_texture_manager.texture_ref() {
+                        canvas.copy_ex(tex, None, rect, 0f64, None, true, false)?;
+                    }
+                    if let Some(overlay) = countdown_overlay {
+                        canvas.copy(overlay, None, rect)?;
+                    }
                 }
                 if let Some(overlay) = countdown_overlay {
                     let rect = rects
