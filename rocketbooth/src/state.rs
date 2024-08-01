@@ -221,7 +221,7 @@ impl<'t, T> State<'t, T> {
                 image_saving_handle,
                 ..
             } if deadline < now && image_saving_handle.is_finished() => State::Welcome {
-                deadline: deadline + Duration::from_secs(3),
+                deadline: deadline + Duration::from_secs(30),
             },
             _ => self,
         })

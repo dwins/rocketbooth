@@ -34,12 +34,13 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
                     gpiochip::EventRequestFlags::RISING_EDGE,
                 )
                 .unwrap();
-            let last_fired_event = 0u64;
+            let mut last_fired_event = 0u64;
             loop {
-                let bitmap = gpiochip::wait_for_event(&[&button], 1000).unwrap();
+                let bitmap = gpiochip::wait_for_event(&[&button], 200).unwrap();
                 if bitmap & 0b01 == 0b01 {
                     let event = button.read().unwrap();
-                    if event.timestamp > last_fired_event + 50_000_000u64 {
+                    if event.timestamp > last_fired_event + 500_000_000u64 {
+                        last_fired_event = event.timestamp;
                         sender.push_custom_event(GpioEvent()).unwrap();
                     }
                 }
