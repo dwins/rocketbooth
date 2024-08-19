@@ -1,17 +1,25 @@
+# Configuration for connecting to the camera
 [video_source]
-# path = "/dev/video0"
-path = "/mnt/c/Users/cdwin/Downloads/VID_20171212_211842.mp4"
-# format = "v4l2"
-# video_codec = "h264_v4l2m2m"
+# A resource path. Typically for a usb connected webcam on Linux this will be  the special file /dev/video0 but any path that ffmpeg understands will work here.
+path = "/dev/video0"
+# The "container format". Can be inferred for some inputs but not all. For a usb connected webcam on Linux this should be "v4l2"
+format = "v4l2"
+# A list of two numbers specifying width, height of the *displayed* images (final captured images always use the full resolution provided by the camera.) Reducing this can help to avoid lag in the live camera view while the photo booth is running.
 display_size = [960, 540]
 
+# Additional ffmpeg format options. These are specific to the container format.
 [video_source.options]
-# framerate = "10"
-# video_size = "1920x1080"
-# input_format = "h264"
+framerate = "10"
+video_size = "1920x1080"
+input_format = "h264"
 
+# Options for saving images to disk 
 [image]
+# How to arrange/how many images to capture. Can be omitted for a single image, "two_by_two" takes four images and grids them into an image with the same aspect ratio.
 layout = "two_by_two"
+# A prefix added to for names when exporting. May include "/" characters to specify a directory path.
 prefix = "pb_"
+# A post-command may be specified to do some other work with photos after capture. This setting allows disabling that command without deleting it, to ease testing changes to other settings.
 enable_post_command = false
+# If specified, this command will run after each photo is saved to disk with the filename of the photo as the final argument. For example, to print via the default printer, you could set it to ["lpr"]
 post_command = ["lpr"]
