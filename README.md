@@ -24,7 +24,10 @@ sudo apt install $(cat raspi-packages)
 
 To install Rust and Cargo, use the setup scripts from https://rustup.rs/ .
 
-To build the Rust sources, use `cargo build --release`.
+To build the Rust sources, use 
+```sh
+cargo build --release
+```
 See the Cargo documentation for more information.
 
 ## Configuration
@@ -40,7 +43,17 @@ These are found in a directory named `prompts` in the same directory as the conf
 * `prompts/prompts.003.png` through `prompts/prompts.006.png` define the numbers used to count down while the photobooth timer is active.
 * `prompts/prompts.007.png` is displayed with some animation to delay for the printer but not give the appearance of the app freezing.
 
-Additionally the `shadow.png` in the same directory as the config file is used to mask captured images during the photobooth timer.
+### GPIO
+
+The Raspberry Pi hardware includes a General Purpose Input/Output (GPIO) device for integrating with external electronics. 
+Rocketbooth supports using the GPIO pins to advance through the states of the photobooth process - eg by hooking up a button directly to the GPIO pins.
+
+This functionality is **disabled** in the default build!
+To enable it, switch on the `gpio` feature when building Rocketbooth, eg 
+```sh
+cargo build --release -F gpio
+```
+Rocketbooth currently always looks for a rising edge on the GPIO2 pin, but I'm open to pull requests improving the configurability for this!
 
 ## Running
 This application is designed to run without an X11 graphical environment and so you can configure your raspberry pi to use console/text mode to have a faster startup time and lower RAM usage.
