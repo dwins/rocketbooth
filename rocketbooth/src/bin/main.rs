@@ -64,6 +64,8 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut event_pump = sdl_context.event_pump()?;
 
+    sdl_context.mouse().show_cursor(false);
+
     loop {
         state = state.handle_event(event_pump.poll_iter(), &mut context)?;
         state.render(&mut canvas, &mut context)?;
