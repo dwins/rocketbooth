@@ -7,9 +7,8 @@ Requires=local-fs.target
 After=local-fs.target
 
 [Service]
-ExecStart=/home/pi/rocketbooth/rocketbooth
+ExecStart=/home/pi/rocketbooth/rocketbooth /mnt/usb0/rocketbooth/Rocketbooth.toml /mnt/usb1/rocketbooth/Rocketbooth.toml /mnt/usb2/rocketbooth/Rocketbooth.toml /mnt/usb3/rocketbooth/Rocketbooth.toml /home/pi/rocketbooth/Rocketbooth.toml
 User=pi
-WorkingDirectory=/home/pi/rocketbooth
 
 [Install]
 WantedBy=multi-user.target
