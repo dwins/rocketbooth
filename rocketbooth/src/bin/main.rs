@@ -1,10 +1,21 @@
+use std::env::args;
+
 use rocketbooth::{ContextBuilder, State};
 
 #[cfg(feature = "gpio")]
 struct GpioEvent();
 
 pub fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let context_builder: ContextBuilder = ContextBuilder::from_file("Rocketbooth.toml")?;
+    let candidate_config_paths: Vec<String> = args().skip(1).collect();
+    let candidate_config_paths = if candidate_config_paths.is_empty() {
+        vec![String::from("Rocketbooth.toml")]
+    } else {
+        candidate_config_paths
+    };
+    let context_builder: ContextBuilder = candidate_config_paths
+        .iter()
+        .find_map(|path| ContextBuilder::from_file(path).ok())
+        .ok_or_else(|| format!("No valid config file found; checked {candidate_config_paths:?}"))?;
     let sdl_context = sdl2::init()?;
     let video_subsystem = sdl_context.video()?;
     #[cfg(feature = "gpio")]
