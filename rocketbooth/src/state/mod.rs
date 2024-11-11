@@ -1,3 +1,5 @@
+mod context;
+
 use std::{
     path::PathBuf,
     process::Command,
@@ -12,16 +14,18 @@ use sdl2::{
     mouse::MouseButton,
     pixels::Color,
     rect::Rect,
-    render::{Canvas, RenderTarget, Texture, TextureCreator},
+    render::{Canvas, RenderTarget, Texture},
 };
 use time::format_description::BorrowedFormatItem;
 use time::macros::format_description;
 use time::OffsetDateTime;
 
 use crate::{
-    config::ImageLayout, image_libav::frame_to_image, image_sdl2::image_to_texture,
-    libav_sdl2::FrameTextureManager, Config,
+    config::ImageLayout, image_libav::frame_to_image,
+    libav_sdl2::FrameTextureManager,
 };
+
+pub use self::context::{Context, ContextBuilder};
 
 const FILE_TIMESTAMP_FORMAT: &[BorrowedFormatItem] =
     format_description!("[year]-[month]-[day]_[hour]:[minute]:[second]");
@@ -335,43 +339,5 @@ impl<'t, T> State<'t, T> {
             }
         }
         Ok(())
-    }
-}
-
-pub struct Context<'t, T> {
-    config: Config,
-    texture_creator: &'t TextureCreator<T>,
-    prompt01: Texture<'t>,
-    prompt02: Texture<'t>,
-    prompt03: Texture<'t>,
-    prompt04: Texture<'t>,
-    prompt05: Texture<'t>,
-    prompt06: Texture<'t>,
-    prompt07: Texture<'t>,
-}
-
-impl<'t, T> Context<'t, T> {
-    pub fn new(
-        config: Config,
-        texture_creator: &'t TextureCreator<T>,
-    ) -> Result<Self, Box<dyn std::error::Error>> {
-        let prompt01 = image_to_texture("./prompts/prompts.001.png", texture_creator)?;
-        let prompt02 = image_to_texture("./prompts/prompts.002.png", texture_creator)?;
-        let prompt03 = image_to_texture("./prompts/prompts.003.png", texture_creator)?;
-        let prompt04 = image_to_texture("./prompts/prompts.004.png", texture_creator)?;
-        let prompt05 = image_to_texture("./prompts/prompts.005.png", texture_creator)?;
-        let prompt06 = image_to_texture("./prompts/prompts.006.png", texture_creator)?;
-        let prompt07 = image_to_texture("./prompts/prompts.007.png", texture_creator)?;
-        Ok(Self {
-            config,
-            texture_creator,
-            prompt01,
-            prompt02,
-            prompt03,
-            prompt04,
-            prompt05,
-            prompt06,
-            prompt07,
-        })
     }
 }

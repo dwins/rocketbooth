@@ -1,21 +1,10 @@
-use std::{
-    fs::File,
-    io::{BufReader, Read},
-};
-
-use rocketbooth::{Config, Context, State};
+use rocketbooth::{ContextBuilder, State};
 
 #[cfg(feature = "gpio")]
 struct GpioEvent();
 
 pub fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let config: Config = {
-        let f = File::open("Rocketbooth.toml")?;
-        let mut f = BufReader::new(f);
-        let mut buf = String::new();
-        f.read_to_string(&mut buf)?;
-        toml::from_str(&buf)?
-    };
+    let context_builder: ContextBuilder = ContextBuilder::from_file("Rocketbooth.toml")?;
     let sdl_context = sdl2::init()?;
     let video_subsystem = sdl_context.video()?;
     #[cfg(feature = "gpio")]
@@ -57,7 +46,7 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut canvas = window.into_canvas().accelerated().present_vsync().build()?;
 
     let texture_creator = canvas.texture_creator();
-    let mut context = Context::new(config, &texture_creator)?;
+    let mut context = context_builder.build(&texture_creator)?;
     let mut state = State::default();
 
     state.render(&mut canvas, &mut context)?;
