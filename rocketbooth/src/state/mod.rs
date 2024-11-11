@@ -20,10 +20,7 @@ use time::format_description::BorrowedFormatItem;
 use time::macros::format_description;
 use time::OffsetDateTime;
 
-use crate::{
-    config::ImageLayout, image_libav::frame_to_image,
-    libav_sdl2::FrameTextureManager,
-};
+use crate::{config::ImageLayout, image_libav::frame_to_image, libav_sdl2::FrameTextureManager};
 
 pub use self::context::{Context, ContextBuilder};
 
@@ -207,7 +204,10 @@ impl<'t, T> State<'t, T> {
                     let timestamp = OffsetDateTime::now_local()
                         .unwrap_or_else(|_| OffsetDateTime::now_utc())
                         .format(FILE_TIMESTAMP_FORMAT)?;
-                    let saved_path: PathBuf = format!("{prefix}img_{timestamp}.{suffix}").into();
+                    let mut saved_path = PathBuf::from(&context.path);
+                    saved_path.pop();
+                    saved_path.push(format!("{prefix}img_{timestamp}.{suffix}"));
+                    let saved_path = saved_path;
                     let image_saving_handle = std::thread::spawn(move || {
                         let mut final_image = RgbImage::new(width, height);
                         for (&(x, y, _, _), partial_image) in Iterator::zip(
