@@ -29,13 +29,13 @@ impl ContextBuilder {
             Ok(Reader::open(prompt_root.join(s))?.decode()?.into_rgba8())
         };
         let prompts = [
-            load_image("prompts/prompt.001.png")?,
-            load_image("prompts/prompt.002.png")?,
-            load_image("prompts/prompt.003.png")?,
-            load_image("prompts/prompt.004.png")?,
-            load_image("prompts/prompt.005.png")?,
-            load_image("prompts/prompt.006.png")?,
-            load_image("prompts/prompt.007.png")?,
+            load_image("prompts/prompts.001.png")?,
+            load_image("prompts/prompts.002.png")?,
+            load_image("prompts/prompts.003.png")?,
+            load_image("prompts/prompts.004.png")?,
+            load_image("prompts/prompts.005.png")?,
+            load_image("prompts/prompts.006.png")?,
+            load_image("prompts/prompts.007.png")?,
         ];
 
         Ok(Self {
