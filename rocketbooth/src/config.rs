@@ -26,14 +26,40 @@ pub struct ImageSettings {
     pub enable_post_command: bool,
 }
 
+#[derive(Serialize,Deserialize, Debug)]
+pub struct Controls {
+    #[serde(default="default_post_command")]
+    pub enable_exit_inputs: bool,
+    #[serde(default)]
+    pub enable_backspace_command: bool,
+    #[serde(default="default_backspace_command")]
+    pub backspace_command: Vec<String>,
+}
+
+impl Default for Controls {
+    fn default() -> Self {
+        Self {
+            enable_exit_inputs: true,
+            enable_backspace_command: false,
+            backspace_command: vec![],
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Config {
     pub video_source: VideoSource,
     pub image: Option<ImageSettings>,
+    #[serde(default)]
+    pub controls: Controls,
 }
 
 fn default_post_command() -> bool {
     true
+}
+
+fn default_backspace_command() -> Vec<String> {
+    vec![]
 }
 
 #[derive(Serialize, Deserialize, Copy, Clone, Debug, Default)]

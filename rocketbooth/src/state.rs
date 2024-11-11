@@ -64,11 +64,28 @@ impl<'t, T> State<'t, T> {
 
         for event in events {
             match event {
+                Event::KeyDown {
+                    keycode: Some(Keycode::Backspace),
+                    ..
+                } => {
+                    if context.config.controls.enable_backspace_command
+                        && !context.config.controls.backspace_command.is_empty()
+                    {
+                        Command::new(&context.config.controls.backspace_command[0])
+                            .args(&context.config.controls.backspace_command[1..])
+                            .output()
+                            .unwrap();
+                    }
+                }
                 Event::Quit { .. }
                 | Event::KeyDown {
                     keycode: Some(Keycode::Escape | Keycode::Q),
                     ..
-                } => return Result::Err("Shutdown".into()),
+                } => {
+                    if context.config.controls.enable_exit_inputs {
+                        return Result::Err("Shutdown".into());
+                    }
+                }
                 Event::KeyDown {
                     keycode: Some(Keycode::Return | Keycode::Space),
                     ..

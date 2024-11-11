@@ -15,3 +15,8 @@ layout = "two_by_two"
 prefix = "pb_"
 enable_post_command = false
 post_command = ["lpr"]
+
+[controls]
+enable_shutdown_inputs = true
+enable_backspace_command = false
+backspace_command = ["sudo", "poweroff"]
