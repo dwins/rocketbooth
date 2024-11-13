@@ -5,7 +5,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use crate::{config::Config, image_sdl2::loaded_image_to_texture};
+use crate::{config::Config, image_sdl2::image_to_texture};
 use image::RgbaImage;
 use sdl2::render::{Texture, TextureCreator};
 
@@ -55,13 +55,13 @@ impl ContextBuilder {
             config,
             path,
             texture_creator,
-            prompt01: loaded_image_to_texture(prompt01, texture_creator)?,
-            prompt02: loaded_image_to_texture(prompt02, texture_creator)?,
-            prompt03: loaded_image_to_texture(prompt03, texture_creator)?,
-            prompt04: loaded_image_to_texture(prompt04, texture_creator)?,
-            prompt05: loaded_image_to_texture(prompt05, texture_creator)?,
-            prompt06: loaded_image_to_texture(prompt06, texture_creator)?,
-            prompt07: loaded_image_to_texture(prompt07, texture_creator)?,
+            prompt01: image_to_texture(prompt01, texture_creator)?,
+            prompt02: image_to_texture(prompt02, texture_creator)?,
+            prompt03: image_to_texture(prompt03, texture_creator)?,
+            prompt04: image_to_texture(prompt04, texture_creator)?,
+            prompt05: image_to_texture(prompt05, texture_creator)?,
+            prompt06: image_to_texture(prompt06, texture_creator)?,
+            prompt07: image_to_texture(prompt07, texture_creator)?,
         })
     }
 }

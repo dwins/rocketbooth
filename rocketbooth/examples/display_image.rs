@@ -1,6 +1,8 @@
 use rocketbooth::image_to_texture;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
+use std::fs::File;
+use std::io::BufReader;
 use std::time::Duration;
 
 pub fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -16,7 +18,10 @@ pub fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut canvas = window.into_canvas().build()?;
 
     let texture_creator = canvas.texture_creator();
-    let texture = image_to_texture("./prompts/prompts.001.png", &texture_creator)?;
+    let texture = File::open("./prompts/prompts.001.png")?;
+    let texture = BufReader::new(texture);
+    let texture = image::io::Reader::new(texture).decode()?;
+    let texture = image_to_texture(texture.into_rgba8(), &texture_creator)?;
 
     canvas.clear();
     canvas.copy(&texture, None, None)?;
