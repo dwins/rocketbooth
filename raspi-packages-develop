@@ -4,4 +4,5 @@ libavcodec-dev
 libavdevice-dev
 libcups2-dev
 libclang-dev
+libsdl2-dev
 libswscale-dev

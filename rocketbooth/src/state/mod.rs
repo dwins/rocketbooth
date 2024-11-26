@@ -25,7 +25,7 @@ use crate::{config::ImageLayout, image_libav::frame_to_image, libav_sdl2::FrameT
 pub use self::context::{Context, ContextBuilder};
 
 const FILE_TIMESTAMP_FORMAT: &[BorrowedFormatItem] =
-    format_description!("[year]-[month]-[day]_[hour]:[minute]:[second]");
+    format_description!("[year]-[month]-[day]_[hour]-[minute]-[second]");
 
 pub enum State<'t, T> {
     Waiting,
@@ -207,6 +207,7 @@ impl<'t, T> State<'t, T> {
                     let mut saved_path = PathBuf::from(&context.path);
                     saved_path.pop();
                     saved_path.push(format!("{prefix}img_{timestamp}.{suffix}"));
+                    eprintln!("{}", saved_path.display());
                     let saved_path = saved_path;
                     let image_saving_handle = std::thread::spawn(move || {
                         let mut final_image = RgbImage::new(width, height);
