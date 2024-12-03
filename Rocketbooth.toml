@@ -1,22 +1,40 @@
+## Video source settings - eg how to connect to the webcam.
+## Settings correspond to ffmpeg / ffplay command line options, so those tools allow faster iteration when testing out the connection.
 [video_source]
-# path = "/dev/video0"
-path = "/mnt/c/Users/cdwin/Downloads/VID_20171212_211842.mp4"
-# format = "v4l2"
-# video_codec = "h264_v4l2m2m"
+# The path to the video resource, typically /dev/video0 for an attached webcam.
+# However, anything that ffmpeg can play should be valid here - for example a networked camera.
+path = "/dev/video0"
+# Often ffmpeg can detect the video format, however for attached webcams this doesn't work.
+# We can force the Video 4 Linux 2 system to be used by specifying the format.
+format = "v4l2"
+# This controls the resolution of the images used for display; the images captured to disk and used for printing will not be affected.
 display_size = [960, 540]
 
+# Additional, format-specific options.
+# Consult ffmpeg documentation for details.
 [video_source.options]
 # framerate = "10"
 # video_size = "1920x1080"
 # input_format = "h264"
 
+## Settings for printing and capturing images to disk.
 [image]
+# The only valid option is "two_by_two" to take 4 photos in a grid for each stored image. Omit to take a single photo instead.
 layout = "two_by_two"
+# Text to prepend to the timestamp when naming captured image files.  May include directories, will be resolved relative to this config file.
 prefix = "pb_"
+# A "post command" runs after each photo is saved to disk with the photo's file path as a command line argument.
+# Instead of deleting the command, you can disable it with this setting.
 enable_post_command = false
+# The post command, as a list of strings.
+# The filename for each captured image will be appended, one at a time.
 post_command = ["lpr"]
 
+## Enable/disable some custom controls
 [controls]
+# If true, Esc and Q keys will exit rocketbooth.
 enable_shutdown_inputs = true
+# If true, Backspace will execute the command specified in the backspace_command seting.
+# This is intended to be a way to cleanly shut down the device without logging in (eg if Rocketbooth is set to run on system boot.)
 enable_backspace_command = false
 backspace_command = ["sudo", "poweroff"]
